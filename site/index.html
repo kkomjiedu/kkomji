@@ -66,6 +66,8 @@ body {
 .bar h1 { margin: 0 8px 0 0; font-size: 1.9rem; font-weight: 400; line-height: 1; }
 .group { display: flex; flex-wrap: wrap; gap: 8px; }
 .group.end { margin-left: auto; }
+.group { align-items: center; }
+.lab { color: var(--soft); font-size: 1.05rem; white-space: nowrap; } /* 엄마가 보는 설정 이름 */
 /* 그림 버튼은 한 줄로 두고, 넘치면 옆으로 밀어서 본다 */
 #picker { flex-wrap: nowrap; overflow-x: auto; padding-block: 2px; scrollbar-width: thin; }
 #picker .chip { flex: none; }
@@ -292,7 +294,9 @@ body {
 .gi .wh { fill: var(--on-tile); }
 
 /* 점 잇기 */
-.dots { width: min(66vh, 100%, 580px); height: auto; touch-action: none; }
+.dots { width: min(60vh, 100%, 560px); height: auto; touch-action: none; }
+.opts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.opts .chip { min-height: 40px; padding: 0 13px; font-size: 1.05rem; }
 .dots .ln { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .dots .rub { stroke: var(--soft); stroke-width: 1.2; stroke-dasharray: 2 2; stroke-linecap: round; }
 .dots .dot { fill: var(--panel); stroke: var(--ink); stroke-width: 1.3; }
@@ -386,6 +390,13 @@ button.day { cursor: pointer; }
 .fb b { display: block; font-weight: 400; font-size: 1.7rem; }
 .fb small { display: block; margin-top: 3px; font-size: 1.1rem; }
 .fb.good { background: var(--p2); color: var(--on-fill); animation: fb-good .95s ease-out both; }
+.fb.tip { background: var(--accent); color: var(--on-accent); animation: fb-tip 3.4s ease-out both; }
+@keyframes fb-tip {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.7); }
+  6%, 92% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%); }
+}
+.note { fill: var(--soft); font-size: 15px; text-anchor: middle; dominant-baseline: central; font-family: var(--font); pointer-events: none; }
 .fb.bad { border-color: var(--pop); background: var(--panel); color: var(--ink); animation: fb-bad 3.4s ease-out both; }
 .host .cheek { fill: var(--p0); }
 .host .tear { fill: var(--p1); }
@@ -402,7 +413,7 @@ button.day { cursor: pointer; }
   13%, 92% { opacity: 1; transform: translate(-50%, -50%); }
   100% { opacity: 0; transform: translate(-50%, -50%); }
 }
-@media (prefers-reduced-motion: reduce) { .fb.good, .fb.bad { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fb.good, .fb.bad, .fb.tip { animation: none; } }
 
 @keyframes nudge { 50% { transform: scale(1.12); } }
 .nudge { border-color: var(--pop); animation: nudge .8s ease-in-out infinite; }
@@ -424,7 +435,7 @@ button.day { cursor: pointer; }
   .chip svg.ico { width: 22px; height: 22px; }
   /* 단계와 칠교 개수는 지금 고른 것만 보이고, 누르면 다음 것으로 넘어간다 */
   .cyc .chip[aria-pressed="false"] { display: none; }
-  .cyc .chip[aria-pressed="true"]::after { content: "⇄"; margin-left: 1px; opacity: .65; } /* 누르면 바뀐다는 표시 */
+  .lab { font-size: .9rem; }
   #view-tangram .bar h1, #host-t { display: none; }
   #picker .chip { min-height: 36px; padding: 0 9px; font-size: .95rem; }
   .host { width: 32px; height: 32px; }
@@ -516,7 +527,8 @@ body { margin: 0; overscroll-behavior: none; }
     <button class="chip" id="sets-1" type="button" aria-pressed="true">칠교 1개</button>
     <button class="chip" id="sets-2" type="button" aria-pressed="false">칠교 2개</button>
   </div>
-  <div class="group cyc" role="group" aria-label="단계">
+  <div class="group cyc" role="group" aria-label="난이도">
+    <span class="lab">난이도</span>
     <button class="chip" id="level-0" type="button" aria-pressed="false">쉬움</button>
     <button class="chip" id="level-1" type="button" aria-pressed="true">보통</button>
     <button class="chip" id="level-2" type="button" aria-pressed="false">어려움</button>
@@ -552,7 +564,8 @@ body { margin: 0; overscroll-behavior: none; }
   <button class="chip" id="home-q" type="button">홈</button>
   <span id="host-q"></span>
   <h1 id="qtitle"></h1>
-  <div class="group cyc" role="group" aria-label="단계">
+  <div class="group cyc" role="group" aria-label="난이도">
+    <span class="lab">난이도</span>
     <button class="chip" id="ql-0" type="button" aria-pressed="false">쉬움</button>
     <button class="chip" id="ql-1" type="button" aria-pressed="true">보통</button>
     <button class="chip" id="ql-2" type="button" aria-pressed="false">어려움</button>
@@ -849,20 +862,23 @@ body { margin: 0; overscroll-behavior: none; }
   const svg = $('svg'), stage = $('stage');
   const boardRect = mk('rect', { class: 'board', rx: 24 }, svg);
   const trayRect = mk('rect', { class: 'tray', rx: 24 }, svg);
+  const trayNote = mk('text', { class: 'note' }, svg); // 조각 놓는 곳 위쪽의 안내 글
   const slotLayer = mk('g', {}, svg), placedLayer = mk('g', {}, svg), looseLayer = mk('g', {}, svg);
 
   // level 0 쉬움(점선, 방향 맞춰 놓임) / 1 보통(점선, 돌려야 함) / 2 어려움(겉모양만, 돌려야 함)
   let cur = 0, level = 1, sets = 1, turning = true, sound = true, won = false, hintTimer = 0;
   let voice = false; // 말해 주기는 꺼 둔 채로 시작한다 (기기 목소리가 어색할 수 있어서)
+  let dotStep = 1;   // 점 잇기에서 고른 뛰어 세기 (1, 2, 3, 4, 5, 10)
   let ql = {}; // 문제 놀이마다 고른 단계
   try {
     const sv = JSON.parse(localStorage.getItem('chilgyo') || '{}');
     if ([0, 1, 2].includes(sv.level)) level = sv.level;
     if (sv.sets === 2) sets = 2;
     if (sv.voice === true) voice = true;
+    if ([1, 2, 3, 4, 5, 10].includes(sv.dotStep)) dotStep = sv.dotStep;
     if (sv.ql && typeof sv.ql === 'object') ql = sv.ql;
   } catch (err) { /* 저장된 값이 없어도 된다 */ }
-  const save = () => { try { localStorage.setItem('chilgyo', JSON.stringify({ level, sets, ql, voice })); } catch (err) { /* 무시 */ } };
+  const save = () => { try { localStorage.setItem('chilgyo', JSON.stringify({ level, sets, ql, voice, dotStep })); } catch (err) { /* 무시 */ } };
   let pieces = [], slots = [], box = null, unit = 1;
   let W = 0, H = 0, s = 1, ox = 0, oy = 0;
   const active = new Map();
@@ -979,11 +995,12 @@ body { margin: 0; overscroll-behavior: none; }
   }
 
   // 조각 놓는 곳에 겹치지 않게 줄 맞춰 놓기. 안 들어가면 null.
-  function pack(loose, sc) {
+  // squeeze(1 이하): 자리가 모자랄 때 조각이 차지하는 칸을 줄여 서로 조금 겹치게 놓는다. 조각 크기는 그대로다.
+  function pack(loose, sc, squeeze = 1) {
     const pad = 14, m = 12, maxW = tray.w - pad * 2, maxH = tray.h - pad * 2;
     const items = loose.map(p => {
       const b = bounds(turned(p.rel, p.r));
-      return { p, b, w: b.w * sc + m, h: b.h * sc + m };
+      return { p, b, w: b.w * sc * squeeze + m, h: b.h * sc * squeeze + m };
     }).sort((a, b) => b.h - a.h);
     const rows = [];
     let row = { items: [], w: 0, h: 0 };
@@ -1028,9 +1045,13 @@ body { margin: 0; overscroll-behavior: none; }
     let sc = Math.min((board.w - pad * 2) / box.w, (board.h - pad * 2) / box.h), spots = null;
     const loose = pieces.filter(p => !p.placed);
     // 그림 크기는 판에 맞추고, 놓는 곳의 조각만 줄여서 넣는다. 그래도 안 들어가면 그때 그림도 줄인다.
-    let tz = 1;
-    for (let n = 0; n < 90 && !(spots = pack(loose, sc * tz)); n++) { if (tz > 0.42) tz *= 0.95; else sc *= 0.97; }
-    s = sc; trayZ = tz;
+    trayNote.textContent = turning ? '조각을 톡 누르면 돌아가!' : '조각을 끌어서 옮겨 봐!';
+    trayNote.setAttribute('x', tray.x + tray.w / 2);
+    trayNote.setAttribute('y', tray.y + 22);
+    // 조각은 그림의 자리와 늘 같은 크기다. 놓는 곳이 좁으면 조각끼리 조금 겹쳐 놓고, 그래도 안 되면 그림과 조각을 함께 줄인다.
+    let squeeze = 1;
+    for (let n = 0; n < 90 && !(spots = pack(loose, sc, squeeze)); n++) { if (squeeze > 0.6) squeeze *= 0.95; else sc *= 0.97; }
+    s = sc; trayZ = 1;
     ox = board.x + (board.w - box.w * s) / 2 - box.x0 * s;
     oy = board.y + (board.h - box.h * s) / 2 - box.y0 * s;
     slots.forEach(sl => sl.el.setAttribute('points', sl.p.map(v => (ox + v[0] * s) + ',' + (oy + v[1] * s)).join(' ')));
@@ -1039,7 +1060,13 @@ body { margin: 0; overscroll-behavior: none; }
       if (p.placed) { const c = slots[p.slot].c; p.x = ox + c[0] * s; p.y = oy + c[1] * s; }
     });
     pieces.forEach(p => { if (p.placed) p.z = 1; });
-    if (spots) spots.forEach(o => { o.p.x = o.x; o.p.y = o.y; o.p.z = trayZ; });
+    if (spots) spots.forEach(o => {
+      // 겹쳐 놓다 보면 화면 밖으로 삐져나갈 수 있어서 안쪽으로 당긴다
+      const b = bounds(turned(o.p.rel, o.p.r));
+      o.p.x = Math.max(4 - b.x0 * s, Math.min(W - 4 - (b.x0 + b.w) * s, o.x));
+      o.p.y = Math.max(tray.y + 4 - b.y0 * s, Math.min(H - 4 - (b.y0 + b.h) * s, o.y));
+      o.p.z = 1;
+    });
     pieces.forEach(draw);
   }
 
@@ -1114,8 +1141,7 @@ body { margin: 0; overscroll-behavior: none; }
     placedLayer.appendChild(p.g);
     p.g.classList.add('placed');
     tween(p, { x: ox + sl.c[0] * s, y: oy + sl.c[1] * s, z: 1 }, 120);
-    pop();
-    if (!pieces.every(q => q.placed)) feedback(true, pick(PRAISE), ''); // 조각이 맞게 들어갈 때마다 짧게 칭찬
+    pop(); // 조각 하나는 띠링 소리만. 칭찬은 그림을 다 맞췄을 때 한다.
     if (pieces.every(q => q.placed)) {
       won = true;
       setTimeout(() => {
@@ -1181,6 +1207,7 @@ body { margin: 0; overscroll-behavior: none; }
   }));
   [0, 1, 2].forEach(n => $('level-' + n).addEventListener('click', () => {
     level = n; save(); mark(); load(cur);
+    turnTip();
   }));
   $('hint-btn').addEventListener('click', () => {
     slotLayer.classList.remove('plain');
@@ -1276,16 +1303,54 @@ body { margin: 0; overscroll-behavior: none; }
     { name: '왕관', p: [[10, 80], [10, 30], [30, 52], [50, 18], [70, 52], [90, 30], [90, 80]] },
     { name: '고양이', p: [[20, 10], [38, 30], [62, 30], [80, 10], [86, 50], [72, 80], [50, 90], [28, 80], [14, 50]] },
     { name: '보석', p: [[30, 15], [70, 15], [92, 40], [50, 92], [8, 40]] },
+    { name: '연', p: [[50, 4], [86, 38], [50, 96], [14, 38]] },
+    { name: '연필', p: [[20, 6], [80, 6], [80, 66], [50, 96], [20, 66]] },
+    { name: '육각형', p: Array.from({ length: 6 }, (_, i) => [Math.round(50 + 46 * Math.cos(Math.PI * i / 3)), Math.round(50 + 46 * Math.sin(Math.PI * i / 3))]) },
+    { name: '화살표', p: [[50, 4], [92, 46], [66, 46], [66, 96], [34, 96], [34, 46], [8, 46]] },
+    { name: '번개', p: [[52, 4], [18, 56], [44, 56], [30, 96], [84, 38], [56, 38], [76, 4]] },
+    { name: '트럭', p: [[6, 24], [56, 24], [56, 46], [78, 46], [94, 64], [94, 86], [6, 86]] },
+    { name: '컵', p: [[8, 8], [92, 8], [92, 30], [72, 30], [62, 92], [38, 92], [28, 30], [8, 30]] },
+    { name: '버섯', p: [[50, 6], [84, 24], [94, 52], [62, 52], [62, 94], [38, 94], [38, 52], [6, 52]] },
+    { name: '사탕', p: [[30, 30], [70, 30], [94, 10], [94, 90], [70, 70], [30, 70], [6, 90], [6, 10]] },
+    { name: '티셔츠', p: [[32, 6], [68, 6], [98, 34], [80, 54], [68, 40], [68, 94], [32, 94], [32, 40], [20, 54], [2, 34]] },
+    { name: '튤립', p: [[50, 34], [66, 8], [84, 34], [84, 56], [60, 70], [60, 96], [40, 96], [40, 70], [16, 56], [16, 34], [34, 8]] },
+    { name: '굴뚝 집', p: [[46, 6], [62, 20], [62, 4], [82, 4], [82, 34], [96, 52], [76, 52], [76, 94], [22, 94], [22, 52], [2, 52]] },
+    { name: '더하기', p: [[36, 6], [64, 6], [64, 36], [94, 36], [94, 64], [64, 64], [64, 94], [36, 94], [36, 64], [6, 64], [6, 36], [36, 36]] },
+    { name: '나비', p: [[50, 40], [72, 10], [94, 22], [86, 52], [94, 84], [68, 90], [50, 62], [32, 90], [6, 84], [14, 52], [6, 22], [28, 10]] },
+    { name: '성', p: [[4, 94], [4, 30], [24, 30], [24, 52], [40, 52], [40, 8], [60, 8], [60, 52], [76, 52], [76, 30], [96, 30], [96, 94]] },
+    { name: '여섯 뿔 별', p: Array.from({ length: 12 }, (_, i) => { const r = i % 2 ? 26.6 : 46, a = Math.PI * i / 6 - Math.PI / 2; return [Math.round(50 + r * Math.cos(a)), Math.round(50 + r * Math.sin(a))]; }) },
+    { name: '비행기', p: [[50, 4], [62, 30], [94, 50], [94, 70], [62, 62], [60, 84], [74, 96], [26, 96], [40, 84], [38, 62], [6, 70], [6, 50], [38, 30]] },
+    { name: '토끼', p: [[26, 4], [42, 12], [40, 40], [60, 40], [58, 12], [74, 4], [78, 42], [92, 64], [74, 90], [50, 96], [26, 90], [8, 64], [22, 42]] },
   ];
+  const DOT_STEPS = [1, 2, 3, 4, 5, 10];
 
   const GAMES = {
     dots: {
       title: '콕콕',
       rounds: 3,
-      tips: ['1부터 차례대로 점을 이어 봐.', '2, 4, 6. 둘씩 뛰어 세면서 이어 봐.', '5, 10, 15. 다섯씩 뛰어 세면서 이어 봐.'],
+      // 도움말은 고른 뛰어 세기에 따라 달라진다
+      get tips() {
+        const t = dotStep === 1 ? '1부터 차례대로 점을 이어 봐.' : `${dotStep}, ${dotStep * 2}, ${dotStep * 3}. ${dotStep}씩 뛰어 세면서 이어 봐.`;
+        return [t, t, t];
+      },
       // 점 잇기: 숫자 순서대로 점을 누르거나 손을 떼지 않고 이어 가면 그림이 된다.
       next(lv, box) {
-        const P = pick(DOTS).p, n = P.length, step = [1, 2, 5][lv], c = cen(P);
+        // 난이도는 점 개수(★ 7개까지, ★★ 8~10개, ★★★ 11개부터), 뛰어 세기는 위쪽 단추로 고른다
+        const pool = DOTS.filter(d => (lv === 0 ? d.p.length <= 7 : lv === 1 ? d.p.length >= 8 && d.p.length <= 10 : d.p.length >= 11));
+        const P = pick(pool).p, n = P.length, step = dotStep, c = cen(P);
+        let gap = Infinity; // 가장 가까운 두 점 사이
+        P.forEach((a, i) => P.forEach((b, j) => { if (i < j) gap = Math.min(gap, Math.hypot(a[0] - b[0], a[1] - b[1])); }));
+        const reach = Math.min(9.5, gap * 0.48);
+        const opts = el('div', 'opts');
+        opts.setAttribute('role', 'group'); opts.setAttribute('aria-label', '뛰어 세기');
+        DOT_STEPS.forEach(v => {
+          const b = el('button', 'chip', v + '씩');
+          b.type = 'button'; b.id = 'dstep-' + v;
+          b.setAttribute('aria-pressed', String(v === dotStep));
+          b.addEventListener('click', () => { wake(); if (dotStep === v) return; dotStep = v; save(); quiz.n = 0; ask(); });
+          opts.appendChild(b);
+        });
+        box.appendChild(opts);
         const s = mk('svg', { viewBox: '-12 -12 124 124', class: 'dots' }, box);
         const done = mk('polygon', { points: P.map(v => v.join(',')).join(' '), class: 'fill c' + rnd(0, 6) }, s);
         done.style.display = 'none';
@@ -1308,7 +1373,7 @@ body { margin: 0; overscroll-behavior: none; }
           return [-12 + (e.clientX - r.left) / r.width * 124, -12 + (e.clientY - r.top) / r.height * 124];
         };
         const band = q => {
-          const show = at > 0 && at < n && q;
+          const show = at > 0 && at <= n && q;
           rub.style.display = show ? '' : 'none';
           if (!show) return;
           const a = P[at - 1];
@@ -1316,14 +1381,16 @@ body { margin: 0; overscroll-behavior: none; }
         };
         // tap이 참이면 콕 누른 것, 거짓이면 손을 댄 채 지나간 것
         const hit = (q, tap) => {
-          if (quiz.busy || at >= n) return;
+          if (quiz.busy || at > n) return;
           const far = i => Math.hypot(q[0] - P[i][0], q[1] - P[i][1]);
-          if (far(at) < 9.5) { // 점 사이가 20 넘게 떨어져 있어서 넉넉하게 잡아도 옆 점과 헷갈리지 않는다
-            dots[at].o.setAttribute('class', 'dot on');
+          const target = at === n ? 0 : at; // 마지막 점까지 이었으면 처음 점으로 돌아와야 그림이 닫힌다
+          if (far(target) < reach) { // 옆 점과 헷갈리지 않는 만큼만 넉넉하게 잡는다
+            if (at < n) dots[at].o.setAttribute('class', 'dot on');
             at++; quiz.miss = 0;
-            line.setAttribute('points', P.slice(0, at).map(v => v.join(',')).join(' '));
+            line.setAttribute('points', P.slice(0, at).concat(at > n ? [P[0]] : []).map(v => v.join(',')).join(' '));
             tone(440 + at * 30, 0, 0.08);
-            if (at === n) { // 다 이었으면 색이 채워진 그림으로 바뀐다
+            if (at === n) dots[0].o.setAttribute('class', 'dot next'); // 처음 점이 다시 노랗게 켜진다
+            if (at > n) { // 다 이었으면 색이 채워진 그림으로 바뀐다
               band(null); line.style.display = 'none'; done.style.display = '';
               dots.forEach(d => { d.o.style.display = 'none'; d.t.style.display = 'none'; });
               right();
@@ -1342,7 +1409,7 @@ body { margin: 0; overscroll-behavior: none; }
         const up = () => { down = false; band(null); };
         s.addEventListener('pointerup', up);
         s.addEventListener('pointercancel', up);
-        return { custom: true, say: ['1부터 차례대로 점을 이어 봐.', '둘씩 뛰어 세면서 점을 이어 봐.', '다섯씩 뛰어 세면서 점을 이어 봐.'][lv] };
+        return { custom: true, say: (step === 1 ? '1부터 차례대로 점을 이어 봐.' : `${step}씩 뛰어 세면서 점을 이어 봐.`) + ' 끝에는 처음 점으로 돌아와.' };
       },
     },
     bonds: {
@@ -1924,16 +1991,16 @@ body { margin: 0; overscroll-behavior: none; }
     quiz.n++; progress();
     if (quiz.n >= quiz.goal) {
       quiz.won = true;
-      cheer(pick(PRAISE)); // 마지막 문제도 딱지를 먼저 보여 주고 칭찬 화면으로 간다
+      $('cheer').hidden = true; // 한 판을 다 끝냈을 때만 칭찬 화면이 뜬다
       setTimeout(() => {
         if (!quiz.won) return;
         $('qwin').hidden = false; $('cheer').hidden = true; fanfare(); confetti($('qfx'), () => quiz.won);
         say('참 잘했어! 정말 멋지다. 한 번 더 할까?');
       }, 600);
     } else {
-      const word = pick(PRAISE);
-      say(word); cheer(word);
-      setTimeout(() => { if (quiz.busy) ask(true); }, 1000);
+      // 한 문제를 맞히면 띠링 소리와 초록색 표시만. 칭찬은 한 판을 다 끝냈을 때 한다.
+      $('cheer').hidden = true;
+      setTimeout(() => { if (quiz.busy) ask(true); }, 800);
     }
   }
   // 맞혔을 때 잠깐 뜨는 초록 칭찬 딱지
@@ -1960,12 +2027,17 @@ body { margin: 0; overscroll-behavior: none; }
     const c = $('cheer'), words = el('span');
     words.appendChild(el('b', '', title));
     if (detail) words.appendChild(el('small', '', detail));
-    c.className = 'fb ' + (good ? 'good' : 'bad');
-    c.replaceChildren(mood(good), words);
+    c.className = 'fb ' + (good === 'tip' ? 'tip' : good ? 'good' : 'bad'); // 'tip'은 노란 안내 말풍선
+    c.replaceChildren(mood(good !== false), words);
     c.hidden = false;
     c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
     clearTimeout(cheerTimer);
-    cheerTimer = setTimeout(() => { c.hidden = true; }, good ? 950 : 3400);
+    cheerTimer = setTimeout(() => { c.hidden = true; }, good === true ? 950 : 3400);
+  }
+  // 조각을 돌려야 하는 난이도에서는 누르면 돌아간다고 먼저 알려 준다
+  function turnTip() {
+    if (!turning || $('view-tangram').hidden) return;
+    feedback('tip', '조각을 톡 누르면 돌아가!', '방향이 다르면 톡톡 눌러서 맞춰 봐.');
   }
   // 틀렸을 때: 처음에는 다시 해 보라고 하고, 두 번째부터는 엄마처럼 살짝 알려 준다
   // why: 왜 틀렸는지 한마디. 그 뒤에 이 단계의 도움말을 붙여서 보여 주고 읽어 준다.
@@ -1998,7 +2070,7 @@ body { margin: 0; overscroll-behavior: none; }
     if (v !== 'quiz') { quiz.busy = false; quiz.won = false; }
     if (quiet) return;
     if (v === 'home') say('오늘은 뭐하고 놀까?');
-    else if (v === 'tangram') say('요리조리. ' + $('hint').textContent);
+    else if (v === 'tangram') { say('요리조리. ' + $('hint').textContent); turnTip(); }
   }
   // 꼼지: 살짝 기울어진 노란 네모, 윙크하는 얼굴, 파란 세모를 들고 있다
   function mascot() {
@@ -2101,12 +2173,13 @@ body { margin: 0; overscroll-behavior: none; }
   $('hint-btn').textContent = '?';
   $('hint-btn').setAttribute('aria-label', '힌트');
   ['level-', 'ql-'].forEach(pre => [0, 1, 2].forEach(n => {
-    $(pre + n).textContent = '★'.repeat(n + 1) + ' ' + ['쉬움', '보통', '어려움'][n];
+    $(pre + n).textContent = '★'.repeat(n + 1);
+    $(pre + n).setAttribute('aria-label', '난이도 ' + ['쉬움', '보통', '어려움'][n]);
   }));
   [1, 2].forEach(n => {
     const s = mk('svg', { viewBox: '0 0 4 4', 'aria-hidden': 'true' });
     SQUARE.forEach(q => mk('polygon', { points: pts(q) }, s));
-    $('sets-' + n).replaceChildren(s, document.createTextNode(`조각 ${n * 7}개`));
+    $('sets-' + n).replaceChildren(s, document.createTextNode(`조각 ${n}세트`));
   });
   ['home-t', 'home-q', 'qhome'].forEach(id => $(id).addEventListener('click', () => show('home')));
   const TILES = [
@@ -2150,7 +2223,7 @@ body { margin: 0; overscroll-behavior: none; }
     const b = e.target.closest('.chip');
     if (!b || !narrow.matches || b.getAttribute('aria-pressed') !== 'true') return;
     e.stopPropagation();
-    const all = [...g.children];
+    const all = [...g.querySelectorAll('.chip')];
     all[(all.indexOf(b) + 1) % all.length].click();
   }, true));
 
