@@ -310,6 +310,13 @@ body {
 .dots text { fill: var(--ink); font-size: 6px; text-anchor: middle; dominant-baseline: central; font-family: var(--font); pointer-events: none; }
 .dots .fill { stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 
+/* 달력 머리: 이전 달, 달 이름(한글과 영어), 다음 달 */
+.calhead { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.calname { min-width: 150px; text-align: center; line-height: 1.1; }
+.calname b { display: block; font-weight: 400; font-size: 1.8rem; }
+.calname small { display: block; margin-top: 2px; color: var(--soft); font-size: 1.05rem; letter-spacing: .04em; }
+.ico.flip { transform: scaleX(-1); }
+.chip:disabled { opacity: .3; cursor: default; }
 .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: min(540px, 100%); }
 .dow { text-align: center; color: var(--soft); font-size: 1.15rem; }
 .dow.sun { color: var(--p0); }
@@ -394,7 +401,11 @@ button.day { cursor: pointer; }
 .fb b { display: block; font-weight: 400; font-size: 1.7rem; }
 .fb small { display: block; margin-top: 3px; font-size: 1.1rem; }
 .fb.good { background: var(--p2); color: var(--on-fill); animation: fb-good .95s ease-out both; }
-.fb.tip { background: var(--accent); color: var(--on-accent); animation: fb-tip 3.4s ease-out both; }
+/* 안내 말풍선은 작게, 조금 아래에, 잠깐만 */
+.fb.tip { top: max(25%, 168px); gap: 8px; padding: 6px 16px 6px 8px; border-radius: 20px; background: var(--accent); color: var(--on-accent); animation: fb-tip 2s ease-out both; }
+.fb.tip .host { width: 36px; height: 36px; }
+.fb.tip b { font-size: 1.2rem; }
+.fb.tip small { margin-top: 1px; font-size: .9rem; }
 @keyframes fb-tip {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.7); }
   6%, 92% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -1572,7 +1583,7 @@ body { margin: 0; overscroll-behavior: none; }
     },
     calendar: {
       title: '오늘은 무슨 날?',
-      tips: ['달력에서 같은 숫자를 찾아봐.', '맨 윗줄에서 요일을 찾고, 그 줄을 따라 위에서부터 세어 봐.', '옆으로 한 칸이 하루, 아래로 한 칸이 일주일이야.'],
+      tips: ['화살표로 달을 넘기고, 같은 숫자를 찾아봐.', '맨 윗줄에서 요일을 찾고, 그 줄을 따라 위에서부터 세어 봐.', '옆으로 한 칸이 하루, 아래로 한 칸이 일주일이야.'],
       // 달력 보기: 위에 적힌 날을 달력에서 찾아 누른다.
       // ★ 날짜 찾기(11월 15일), ★★ 몇째 요일 찾기(11월 둘째 토요일), ★★★ 며칠 뒤·전, 일주일 뒤, 마지막 요일
       next(lv, box) {
@@ -1594,30 +1605,60 @@ body { margin: 0; overscroll-behavior: none; }
           else { const w = rnd(0, 6); wantDow = w; ans = days - ((dow(days) - w + 7) % 7); goal = `${month}월 마지막 ${DOW[w]}요일`; }
         }
         box.appendChild(el('p', 'bigtime', goal));
-        box.appendChild(el('p', 'qtext', '달력에서 찾아서 눌러 봐'));
-        const cal = el('div', 'cal');
-        box.appendChild(cal);
-        DOW.forEach((d, i) => cal.appendChild(el('div', 'dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : ''), d)));
-        for (let i = 0; i < first; i++) cal.appendChild(el('div'));
-        // 왜 틀렸는지: 요일이 다르면 요일을, 요일은 맞는데 줄이 다르면 줄을, 아니면 누른 날짜를 알려 준다
+        box.appendChild(el('p', 'qtext', '달력을 넘겨서 찾아 눌러 봐'));
+        const EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        // 달력은 다른 달이 펼쳐진 채로 시작한다. 화살표로 달을 넘겨서 찾아야 한다.
+        let cur;
+        do { cur = month + rnd(-(lv + 1), lv + 1); } while (cur === month || cur < 1 || cur > 12);
+        const head = el('div', 'calhead'), name = el('span', 'calname'), cal = el('div', 'cal');
+        const arrow = (id, dir) => {
+          const b = el('button', 'chip'), i = ico('next');
+          b.type = 'button'; b.id = id;
+          if (dir < 0) i.classList.add('flip');
+          b.appendChild(i);
+          b.setAttribute('aria-label', dir < 0 ? '이전 달' : '다음 달');
+          b.addEventListener('click', () => {
+            if (quiz.busy) return;
+            wake(); tone(520, 0, 0.05);
+            cur = Math.max(1, Math.min(12, cur + dir));
+            render();
+          });
+          return b;
+        };
+        const back = arrow('cal-prev', -1), fwd = arrow('cal-next', 1);
+        head.append(back, name, fwd);
+        box.append(head, cal);
+        // 왜 틀렸는지: 달이 다르면 달을, 요일이 다르면 요일을, 요일은 맞는데 줄이 다르면 줄을, 아니면 누른 날짜를 알려 준다
         const why = d => {
+          if (cur !== month) return `지금 보이는 달은 ${cur}월이야. 화살표를 눌러서 ${month}월로 넘겨 봐.`;
           if (wantDow >= 0 && dow(d) !== wantDow) return `그날은 ${DOW[dow(d)]}요일이야.`;
           if (wantDow >= 0) return `${DOW[wantDow]}요일은 맞아. 몇째 줄인지 다시 세어 봐.`;
           return `그날은 ${d}일이야.`;
         };
-        for (let d = 1; d <= days; d++) {
-          const b = el('button', 'day' + (d === ref ? ' ref' : ''), String(d));
-          b.type = 'button'; b.id = 'day-' + d;
-          if (d === ans) b.dataset.ok = '1';
-          b.addEventListener('click', () => {
-            if (quiz.busy) return;
-            wake();
-            if (d === ans) { b.classList.add('yes'); right(); }
-            else miss(b, why(d));
-          });
-          cal.appendChild(b);
+        function render() {
+          const f = new Date(year, cur - 1, 1).getDay(), n = new Date(year, cur, 0).getDate(), here = cur === month;
+          name.replaceChildren(el('b', '', cur + '월'), el('small', '', EN[cur - 1]));
+          back.disabled = cur === 1; fwd.disabled = cur === 12;
+          for (const b of [back, fwd]) { b.classList.remove('nudge'); delete b.dataset.ok; }
+          if (!here) (cur < month ? fwd : back).dataset.ok = '1'; // 두 번 틀리면 넘겨야 할 쪽 화살표가 움직인다
+          cal.replaceChildren();
+          DOW.forEach((d, i) => cal.appendChild(el('div', 'dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : ''), d)));
+          for (let i = 0; i < f; i++) cal.appendChild(el('div'));
+          for (let d = 1; d <= n; d++) {
+            const b = el('button', 'day' + (here && d === ref ? ' ref' : ''), String(d));
+            b.type = 'button'; b.id = 'day-' + d;
+            if (here && d === ans) b.dataset.ok = '1';
+            b.addEventListener('click', () => {
+              if (quiz.busy) return;
+              wake();
+              if (here && d === ans) { b.classList.add('yes'); right(); }
+              else miss(b, why(d));
+            });
+            cal.appendChild(b);
+          }
         }
-        return { custom: true, say: goal + '. 달력에서 찾아서 눌러 봐.' };
+        render();
+        return { custom: true, say: goal + '. 달력을 넘겨서 찾아 눌러 봐.' };
       },
     },
     color: {
@@ -2025,16 +2066,17 @@ body { margin: 0; overscroll-behavior: none; }
     quiz.n++; progress();
     if (quiz.n >= quiz.goal) {
       quiz.won = true;
-      $('cheer').hidden = true; // 한 판을 다 끝냈을 때만 칭찬 화면이 뜬다
+      cheer(pick(PRAISE)); // 마지막 문제도 칭찬을 먼저 보여 주고 칭찬 화면으로 간다
       setTimeout(() => {
         if (!quiz.won) return;
         $('qwin').hidden = false; $('cheer').hidden = true; fanfare(); confetti($('qfx'), () => quiz.won);
         say('참 잘했어! 정말 멋지다. 한 번 더 할까?');
       }, 600);
     } else {
-      // 한 문제를 맞히면 띠링 소리와 초록색 표시만. 칭찬은 한 판을 다 끝냈을 때 한다.
-      $('cheer').hidden = true;
-      setTimeout(() => { if (quiz.busy) ask(true); }, 800);
+      // 한 문제를 맞힐 때마다 꼼지가 짧게 칭찬한다 (조각 하나, 칸 하나처럼 문제 중간에는 소리만 난다)
+      const word = pick(PRAISE);
+      say(word); cheer(word);
+      setTimeout(() => { if (quiz.busy) ask(true); }, 1000);
     }
   }
   // 맞혔을 때 잠깐 뜨는 초록 칭찬 딱지
@@ -2066,7 +2108,7 @@ body { margin: 0; overscroll-behavior: none; }
     c.hidden = false;
     c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
     clearTimeout(cheerTimer);
-    cheerTimer = setTimeout(() => { c.hidden = true; }, good === true ? 950 : 3400);
+    cheerTimer = setTimeout(() => { c.hidden = true; }, good === true ? 950 : good === 'tip' ? 2000 : 3400);
   }
   // 조각을 돌려야 하는 난이도에서는 누르면 돌아간다고 먼저 알려 준다
   function turnTip() {
