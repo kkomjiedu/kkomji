@@ -51,6 +51,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
+/* 빠르게 두 번 누를 때 화면이 확대되지 않게 한다 (아이폰의 두 번 눌러 확대 끄기). 두 손가락 확대는 그대로 된다. */
+html, body, button { touch-action: manipulation; }
 body {
   display: flex; flex-direction: column; gap: 10px;
   padding-inline: 16px; padding-block: 12px;
@@ -120,15 +122,14 @@ body {
   flex: 1; min-height: 0; overflow-y: auto; padding-block: 2px;
   display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; align-content: start;
 }
+/* 잠깐 놀기: 위쪽 줄에 있는 작은 단추. 꼼지가 놀이 하나를 골라 준다. */
 .quick {
-  display: flex; align-items: center; gap: 14px; padding: 14px 18px;
-  border: 0; border-radius: 22px; background: var(--bar); color: var(--on-bar);
-  font: inherit; text-align: left; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px 0 14px;
+  border: 0; border-radius: 999px; background: var(--bar); color: var(--on-bar);
+  font: inherit; cursor: pointer;
 }
-.quick b { display: block; font-weight: 400; font-size: 1.3rem; }
-.quick small { font-size: 1rem; opacity: .8; }
-.quick .ico { width: 30px; height: 30px; flex: none; }
-.quick .go { margin-left: auto; }
+.quick b { font-weight: 400; font-size: 1.25rem; line-height: 1; white-space: nowrap; }
+.quick .ico { width: 24px; height: 24px; flex: none; }
 .quick:focus-visible { outline: 3px solid var(--pop); outline-offset: 2px; }
 .brandline { margin: 0; text-align: center; color: var(--soft); font-size: .95rem; }
 
@@ -258,8 +259,10 @@ body {
 /* 폴짝폴짝: 수 배열표 */
 .hund { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 4px; width: min(100%, 580px); }
 .hund .day { min-height: 0; aspect-ratio: 1; border-radius: 10px; font-size: clamp(.8rem, 3.2vw, 1.35rem); }
-.hund.frag { width: min(72%, 270px); gap: 6px; }
-.hund.frag .day { font-size: 1.7rem; }
+.hund.frag { width: min(100%, 52vh, 380px); gap: 6px; }
+.hund.frag .day { font-size: clamp(1.1rem, 5vw, 1.6rem); }
+.leg { display: flex; gap: 10px; }
+.leg span { padding: 6px 16px; border: 2px solid var(--line); border-radius: 999px; background: var(--tray); font-size: 1.25rem; line-height: 1.1; }
 
 /* 짤랑짤랑: 동전 */
 .shop { display: flex; align-items: center; gap: 14px; }
@@ -276,20 +279,27 @@ body {
 /* 뾰로롱: 마방진. 줄 끝 동그라미가 그 줄의 합 */
 .magic { display: grid; grid-template-columns: repeat(4, auto); align-items: center; justify-items: center; gap: 6px; }
 .mc { display: flex; align-items: center; justify-content: center; width: 74px; height: 74px; border: 2px solid var(--line); border-radius: 14px; background: var(--tray); font-size: 2rem; line-height: 1; }
-.mc.hide { border-style: dashed; background: transparent; }
-.mc.ask { border: 3px dashed var(--pop); background: var(--panel); color: var(--pop); }
+.mc.slot { padding: 0; border-style: dashed; background: var(--panel); color: var(--pop); font: inherit; font-size: 2rem; cursor: pointer; }
+.mc.slot.user { border-style: solid; }
+.mc.slot.sel { border: 4px solid var(--pop); }
+.mc.slot:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.msum.ok { background: var(--p2); color: var(--on-fill); }
+.msum.bad { background: var(--pop); color: var(--paper); }
+.pad { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.ntile { width: 64px; height: 64px; padding: 0; border: 3px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--ink); font: inherit; font-size: 2rem; line-height: 1; cursor: pointer; }
+.ntile:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .msum { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 1.3rem; line-height: 1; }
 .gi .wh { fill: var(--on-tile); }
 
 /* 점 잇기 */
-.dots { width: min(58vh, 100%, 500px); height: auto; touch-action: none; }
+.dots { width: min(66vh, 100%, 580px); height: auto; touch-action: none; }
 .dots .ln { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .dots .rub { stroke: var(--soft); stroke-width: 1.2; stroke-dasharray: 2 2; stroke-linecap: round; }
 .dots .dot { fill: var(--panel); stroke: var(--ink); stroke-width: 1.3; }
 .dots .dot.next { fill: var(--accent); }
 .dots .dot.on { fill: var(--ink); }
 .dots .dot.nudge { fill: var(--pop); transform-box: fill-box; transform-origin: center; }
-.dots text { fill: var(--ink); font-size: 6.5px; text-anchor: middle; dominant-baseline: central; font-family: var(--font); pointer-events: none; }
+.dots text { fill: var(--ink); font-size: 6px; text-anchor: middle; dominant-baseline: central; font-family: var(--font); pointer-events: none; }
 .dots .fill { stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 
 .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: min(540px, 100%); }
@@ -365,6 +375,35 @@ button.day { cursor: pointer; }
 .gi .qm { fill: var(--on-tile); font-size: 26px; text-anchor: middle; dominant-baseline: central; font-family: var(--font); }
 .dow.ref { border-radius: 10px; background: var(--accent); color: var(--on-accent); }
 
+/* 꼼지의 한마디: 맞히면 웃는 얼굴로 짧게, 틀리면 아쉬운 얼굴로 왜 그런지 알려 준다 */
+.fb {
+  position: fixed; left: 50%; top: max(13%, 76px); z-index: 30; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(92vw, 540px);
+  padding: 10px 22px 10px 12px; border: 3px solid transparent; border-radius: 26px;
+  box-shadow: 0 8px 24px var(--shadow); line-height: 1.2; pointer-events: none;
+}
+.fb .host { width: 54px; height: 54px; }
+.fb b { display: block; font-weight: 400; font-size: 1.7rem; }
+.fb small { display: block; margin-top: 3px; font-size: 1.1rem; }
+.fb.good { background: var(--p2); color: var(--on-fill); animation: fb-good .95s ease-out both; }
+.fb.bad { border-color: var(--pop); background: var(--panel); color: var(--ink); animation: fb-bad 3.4s ease-out both; }
+.host .cheek { fill: var(--p0); }
+.host .tear { fill: var(--p1); }
+@keyframes fb-good {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  32%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+}
+@keyframes fb-bad {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.7); }
+  5% { opacity: 1; transform: translate(calc(-50% - 7px), -50%) scale(1); }
+  9% { transform: translate(calc(-50% + 7px), -50%); }
+  13%, 92% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -50%); }
+}
+@media (prefers-reduced-motion: reduce) { .fb.good, .fb.bad { animation: none; } }
+
 @keyframes nudge { 50% { transform: scale(1.12); } }
 .nudge { border-color: var(--pop); animation: nudge .8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .nudge { animation: none; border-width: 5px; } }
@@ -385,6 +424,7 @@ button.day { cursor: pointer; }
   .chip svg.ico { width: 22px; height: 22px; }
   /* 단계와 칠교 개수는 지금 고른 것만 보이고, 누르면 다음 것으로 넘어간다 */
   .cyc .chip[aria-pressed="false"] { display: none; }
+  .cyc .chip[aria-pressed="true"]::after { content: "⇄"; margin-left: 1px; opacity: .65; } /* 누르면 바뀐다는 표시 */
   #view-tangram .bar h1, #host-t { display: none; }
   #picker .chip { min-height: 36px; padding: 0 9px; font-size: .95rem; }
   .host { width: 32px; height: 32px; }
@@ -399,9 +439,10 @@ button.day { cursor: pointer; }
   .tile .gi { align-self: center; width: 56px; height: 56px; }
   .tile b { font-size: 1.2rem; }
   .tile small { font-size: .85rem; }
-  .quick { padding: 10px 14px; border-radius: 18px; }
-  .quick b { font-size: 1.1rem; }
-  .quick small { font-size: .9rem; }
+  .quick { min-height: 40px; padding: 0 12px 0 10px; gap: 6px; }
+  .quick b { font-size: 1rem; }
+  .quick .ico { width: 20px; height: 20px; }
+  .hello p { display: none; }
   .brandline { display: none; }
   .qwrap { gap: 12px; padding: 10px; }
   .qtext { font-size: 1.3rem; }
@@ -411,7 +452,8 @@ button.day { cursor: pointer; }
   .swatches { gap: 9px; }
   .eq { font-size: 1.9rem; }
   .brick { min-width: 60px; height: 52px; font-size: 1.6rem; }
-  .mc { width: 60px; height: 60px; font-size: 1.7rem; }
+  .mc, .mc.slot { width: 60px; height: 60px; font-size: 1.7rem; }
+  .ntile { width: 54px; height: 54px; font-size: 1.7rem; }
   .msum { width: 44px; height: 44px; font-size: 1.15rem; }
   .tag { font-size: 1.6rem; }
   .purse { min-height: 70px; }
@@ -420,6 +462,17 @@ button.day { cursor: pointer; }
   .win-card h2 { font-size: 1.8rem; }
   .win-mj .mj { width: 84px; height: 84px; }
   .win-card .chip { min-height: 52px; padding: 0 22px; }
+}
+/* 아주 좁은 화면에서는 잠깐 놀기 단추가 그림만 남는다 */
+@media (max-width: 480px) {
+  .quick { padding: 0 11px; }
+  .quick b { display: none; }
+}
+/* 휴대폰을 눕혔을 때: 타일을 세 줄로 놓아 한 화면에 더 많이 보이게 한다 */
+@media (max-height: 520px) and (min-width: 560px) {
+  .tiles { grid-template-columns: repeat(3, 1fr); }
+  .tile { flex-direction: row; align-items: center; gap: 10px; padding: 8px 12px; }
+  .tile .gi { align-self: auto; width: 44px; height: 44px; }
 }
 </style>
 <meta name="theme-color" content="#FFF8E7">
@@ -445,12 +498,12 @@ body { margin: 0; overscroll-behavior: none; }
     <p>꼼지와 함께하는 작은 놀이</p>
   </div>
   <div class="group">
+    <button class="quick" id="quick" type="button"></button>
     <button class="chip" id="voice-home" type="button" aria-pressed="false">말</button>
     <button class="chip" id="sound-home" type="button" aria-pressed="true">소리</button>
   </div>
 </header>
 <div class="tiles" id="tiles"></div>
-<button class="quick" id="quick" type="button"></button>
 <p class="brandline">꼼지 · 아이는 놀고, 엄마는 쉬고.</p>
 </section>
 
@@ -524,6 +577,8 @@ body { margin: 0; overscroll-behavior: none; }
 </div>
 <p class="hint" id="qhint"></p>
 </section>
+
+<div class="fb" id="cheer" role="status" hidden></div>
 
 <script>
 (() => {
@@ -826,11 +881,12 @@ body { margin: 0; overscroll-behavior: none; }
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     return { x0, y0, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
   };
-  const draw = p => p.g.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${p.rot})`);
+  // z: 조각 놓는 곳에서는 작게 두었다가(trayZ), 집으면 제 크기(1)로 커진다
+  const draw = p => p.g.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${p.rot}) scale(${p.z})`);
 
   function tween(p, to, ms, done) {
     if (p.anim) cancelAnimationFrame(p.anim);
-    const from = { x: p.x, y: p.y, rot: p.rot }, t0 = performance.now();
+    const from = { x: p.x, y: p.y, rot: p.rot, z: p.z }, t0 = performance.now();
     const step = now => {
       const k = reduce ? 1 : Math.min(1, (now - t0) / ms), e = 1 - (1 - k) * (1 - k);
       for (const key in to) p[key] = from[key] + (to[key] - from[key]) * e;
@@ -906,7 +962,7 @@ body { margin: 0; overscroll-behavior: none; }
     pieces = slots.map((sl, k) => {
       const g = mk('g', { class: 'piece' }, looseLayer);
       const r = turning ? 90 * (1 + Math.floor(Math.random() * 3)) : 0;
-      const p = { k, t: sl.t, rel: sl.rel, r, rot: r, x: 0, y: 0, placed: false, slot: -1, g, poly: mk('polygon', { class: 'c' + (k % 7) }, g), anim: 0 };
+      const p = { k, t: sl.t, rel: sl.rel, r, rot: r, x: 0, y: 0, z: 1, placed: false, slot: -1, g, poly: mk('polygon', { class: 'c' + (k % 7) }, g), anim: 0 };
       g.addEventListener('pointerdown', e => down(e, p));
       return p;
     });
@@ -953,24 +1009,28 @@ body { margin: 0; overscroll-behavior: none; }
     return out;
   }
 
-  let board = null, tray = null;
+  let board = null, tray = null, trayZ = 1;
+  const restZ = p => (tray && p.x >= tray.x && p.x <= tray.x + tray.w && p.y >= tray.y && p.y <= tray.y + tray.h ? trayZ : 1);
   function layout() {
     W = stage.clientWidth; H = stage.clientHeight;
     if (!W || !H || !box) return;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const wide = W > H, gap = 12;
-    const share = pieces.length > 7 ? 0.5 : 0.56;
-    board = wide ? { x: 0, y: 0, w: Math.round(W * share), h: H } : { x: 0, y: 0, w: W, h: Math.round(H * (share - 0.04)) };
+    // 맞추는 판을 크게 잡는다. 조각은 놓는 곳에서 작게 보이므로 자리가 덜 든다.
+    const share = pieces.length > 7 ? 0.58 : 0.62;
+    board = wide ? { x: 0, y: 0, w: Math.round(W * share), h: H } : { x: 0, y: 0, w: W, h: Math.round(H * (share + 0.03)) };
     tray = wide ? { x: board.w + gap, y: 0, w: W - board.w - gap, h: H } : { x: 0, y: board.h + gap, w: W, h: H - board.h - gap };
     for (const [el, r, inset] of [[boardRect, board, 0], [trayRect, tray, 1.5]]) {
       el.setAttribute('x', r.x + inset); el.setAttribute('y', r.y + inset);
       el.setAttribute('width', Math.max(0, r.w - inset * 2)); el.setAttribute('height', Math.max(0, r.h - inset * 2));
     }
-    const pad = Math.min(board.w, board.h) * 0.08 + 8;
+    const pad = Math.min(board.w, board.h) * 0.05 + 6;
     let sc = Math.min((board.w - pad * 2) / box.w, (board.h - pad * 2) / box.h), spots = null;
     const loose = pieces.filter(p => !p.placed);
-    for (let n = 0; n < 60 && !(spots = pack(loose, sc)); n++) sc *= 0.96;
-    s = sc;
+    // 그림 크기는 판에 맞추고, 놓는 곳의 조각만 줄여서 넣는다. 그래도 안 들어가면 그때 그림도 줄인다.
+    let tz = 1;
+    for (let n = 0; n < 90 && !(spots = pack(loose, sc * tz)); n++) { if (tz > 0.42) tz *= 0.95; else sc *= 0.97; }
+    s = sc; trayZ = tz;
     ox = board.x + (board.w - box.w * s) / 2 - box.x0 * s;
     oy = board.y + (board.h - box.h * s) / 2 - box.y0 * s;
     slots.forEach(sl => sl.el.setAttribute('points', sl.p.map(v => (ox + v[0] * s) + ',' + (oy + v[1] * s)).join(' ')));
@@ -978,7 +1038,8 @@ body { margin: 0; overscroll-behavior: none; }
       p.poly.setAttribute('points', p.rel.map(v => (v[0] * s) + ',' + (v[1] * s)).join(' '));
       if (p.placed) { const c = slots[p.slot].c; p.x = ox + c[0] * s; p.y = oy + c[1] * s; }
     });
-    if (spots) spots.forEach(o => { o.p.x = o.x; o.p.y = o.y; });
+    pieces.forEach(p => { if (p.placed) p.z = 1; });
+    if (spots) spots.forEach(o => { o.p.x = o.x; o.p.y = o.y; o.p.z = trayZ; });
     pieces.forEach(draw);
   }
 
@@ -996,6 +1057,7 @@ body { margin: 0; overscroll-behavior: none; }
     active.set(e.pointerId, p);
     looseLayer.appendChild(p.g);
     p.g.classList.add('drag');
+    tween(p, { z: 1 }, 110); // 집으면 제 크기로 커진다
     try { svg.setPointerCapture(e.pointerId); } catch (err) { /* 잡지 못해도 놀이는 된다 */ }
   }
   svg.addEventListener('pointermove', e => {
@@ -1014,8 +1076,11 @@ body { margin: 0; overscroll-behavior: none; }
     p.g.classList.remove('drag');
     if (!p.drag.moved && turning) {
       p.r += 90;
-      tween(p, { rot: p.r }, 160, () => { p.r %= 360; p.rot = p.r; draw(p); snap(p); });
-    } else snap(p);
+      tween(p, { rot: p.r, z: restZ(p) }, 160, () => { p.r %= 360; p.rot = p.r; draw(p); snap(p); });
+    } else {
+      snap(p);
+      if (!p.placed) tween(p, { z: restZ(p) }, 120); // 놓는 곳에 내려놓으면 다시 작아진다
+    }
   };
   svg.addEventListener('pointerup', up);
   svg.addEventListener('pointercancel', up);
@@ -1023,14 +1088,24 @@ body { margin: 0; overscroll-behavior: none; }
   function snap(p) {
     if (p.placed) return;
     const rp = turned(p.rel, p.r), tol = unit * s * [0.9, 0.6, 0.45][level], eps = unit * 0.12;
-    let best = -1, bestD = Infinity;
+    let best = -1, bestD = Infinity, near = false; // near: 맞는 모양의 빈자리 가까이에 놓았는지
     slots.forEach((sl, j) => {
       if (sl.filled || sl.t !== p.t) return;
       const d = Math.hypot(p.x - (ox + sl.c[0] * s), p.y - (oy + sl.c[1] * s));
-      if (d > tol || d >= bestD) return;
+      if (d > tol) return;
+      near = true;
+      if (d >= bestD) return;
       if (rp.every(v => sl.rel.some(w => Math.hypot(v[0] - w[0], v[1] - w[1]) < eps))) { best = j; bestD = d; }
     });
-    if (best < 0) return;
+    if (best < 0) {
+      // 자리는 맞게 찾았는데 방향이 다를 때만 알려 준다
+      if (near) {
+        const why = turning ? '방향이 달라. 톡 눌러서 돌려 봐.' : '자리는 맞는데 방향이 달라. 다른 조각일지도 몰라.';
+        feedback(false, '거의 다 왔어!', why);
+        say('거의 다 왔어! ' + why);
+      }
+      return;
+    }
     const sl = slots[best];
     sl.filled = true; p.placed = true; p.slot = best;
     // 같은 모양 조각이 서로의 자리에 들어가도 되도록, 자리의 모양으로 바꿔 끼운다
@@ -1038,8 +1113,9 @@ body { margin: 0; overscroll-behavior: none; }
     p.poly.setAttribute('points', p.rel.map(v => (v[0] * s) + ',' + (v[1] * s)).join(' '));
     placedLayer.appendChild(p.g);
     p.g.classList.add('placed');
-    tween(p, { x: ox + sl.c[0] * s, y: oy + sl.c[1] * s }, 120);
+    tween(p, { x: ox + sl.c[0] * s, y: oy + sl.c[1] * s, z: 1 }, 120);
     pop();
+    if (!pieces.every(q => q.placed)) feedback(true, pick(PRAISE), ''); // 조각이 맞게 들어갈 때마다 짧게 칭찬
     if (pieces.every(q => q.placed)) {
       won = true;
       setTimeout(() => {
@@ -1191,12 +1267,12 @@ body { margin: 0; overscroll-behavior: none; }
   // 점 잇기 그림. 0~100 좌표에 점을 차례로 적는다. 마지막 점은 첫 점으로 이어진다.
   const DOTS = [
     { name: '별', p: Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? 19 : 46, a = Math.PI * i / 5 - Math.PI / 2; return [Math.round(50 + r * Math.cos(a)), Math.round(52 + r * Math.sin(a))]; }) },
-    { name: '집', p: [[50, 8], [92, 40], [74, 40], [74, 90], [26, 90], [26, 40], [8, 40]] },
-    { name: '하트', p: [[50, 90], [20, 60], [8, 40], [12, 22], [26, 12], [40, 16], [50, 28], [60, 16], [74, 12], [88, 22], [92, 40], [80, 60]] },
+    { name: '집', p: [[50, 8], [94, 42], [74, 42], [74, 92], [26, 92], [26, 42], [6, 42]] },
+    { name: '하트', p: [[50, 92], [22, 64], [8, 40], [16, 18], [36, 12], [50, 30], [64, 12], [84, 18], [92, 40], [78, 64]] },
     { name: '물고기', p: [[10, 50], [30, 28], [55, 22], [75, 35], [92, 18], [92, 82], [75, 65], [55, 78], [30, 72]] },
-    { name: '로켓', p: [[50, 5], [66, 25], [66, 60], [82, 80], [66, 76], [60, 92], [40, 92], [34, 76], [18, 80], [34, 60], [34, 25]] },
-    { name: '돛단배', p: [[8, 60], [40, 60], [40, 8], [86, 44], [58, 44], [58, 60], [92, 60], [76, 88], [24, 88]] },
-    { name: '나무', p: [[50, 6], [72, 30], [60, 30], [80, 54], [64, 54], [86, 78], [58, 78], [58, 94], [42, 94], [42, 78], [14, 78], [36, 54], [20, 54], [40, 30], [28, 30]] },
+    { name: '로켓', p: [[50, 4], [70, 28], [70, 60], [92, 86], [66, 82], [50, 96], [34, 82], [8, 86], [30, 60], [30, 28]] },
+    { name: '돛단배', p: [[6, 62], [38, 62], [38, 6], [88, 40], [62, 40], [62, 62], [94, 62], [78, 92], [22, 92]] },
+    { name: '나무', p: [[50, 4], [84, 34], [64, 34], [94, 70], [62, 70], [62, 96], [38, 96], [38, 70], [6, 70], [36, 34], [16, 34]] },
     { name: '왕관', p: [[10, 80], [10, 30], [30, 52], [50, 18], [70, 52], [90, 30], [90, 80]] },
     { name: '고양이', p: [[20, 10], [38, 30], [62, 30], [80, 10], [86, 50], [72, 80], [50, 90], [28, 80], [14, 50]] },
     { name: '보석', p: [[30, 15], [70, 15], [92, 40], [50, 92], [8, 40]] },
@@ -1223,7 +1299,7 @@ body { margin: 0; overscroll-behavior: none; }
           const d = Math.hypot(dir[0], dir[1]);
           const t = mk('text', { x: v[0] + dir[0] / d * 8.5, y: v[1] + dir[1] / d * 8.5 }, s);
           t.textContent = (i + 1) * step;
-          return { t, o: mk('circle', { cx: v[0], cy: v[1], r: 3.4, class: i === 0 ? 'dot next' : 'dot' }, s) };
+          return { t, o: mk('circle', { cx: v[0], cy: v[1], r: 3, class: i === 0 ? 'dot next' : 'dot' }, s) };
         });
         let at = 0, down = false;
         rub.style.display = 'none';
@@ -1242,7 +1318,7 @@ body { margin: 0; overscroll-behavior: none; }
         const hit = (q, tap) => {
           if (quiz.busy || at >= n) return;
           const far = i => Math.hypot(q[0] - P[i][0], q[1] - P[i][1]);
-          if (far(at) < 8) {
+          if (far(at) < 9.5) { // 점 사이가 20 넘게 떨어져 있어서 넉넉하게 잡아도 옆 점과 헷갈리지 않는다
             dots[at].o.setAttribute('class', 'dot on');
             at++; quiz.miss = 0;
             line.setAttribute('points', P.slice(0, at).map(v => v.join(',')).join(' '));
@@ -1253,7 +1329,7 @@ body { margin: 0; overscroll-behavior: none; }
               right();
             }
           } else if (tap && P.some((v, i) => i > at && far(i) < 6)) {
-            buzz(); say(pick(RETRY)); quiz.miss++;
+            miss(null, '그 점은 아직 차례가 아니야.');
             if (quiz.miss >= 2) dots[at].o.classList.add('nudge');
           }
         };
@@ -1323,6 +1399,7 @@ body { margin: 0; overscroll-behavior: none; }
           return {
             answer: n,
             choices: options(n, [o * 10 + t, n + 10, n - 10, n + 1, n - 1, t + o]),
+            why: v => (v === o * 10 + t && t !== o ? '묶음과 낱개를 바꿔서 셌어.' : v === t + o ? '묶음 하나는 구슬 열 개야.' : ''),
             say: lv === 0 ? `10개씩 ${t}묶음, 그리고 낱개 ${o}개. 구슬은 모두 몇 개일까?` : '',
           };
         }
@@ -1340,7 +1417,7 @@ body { margin: 0; overscroll-behavior: none; }
           ctl.appendChild(b);
         });
         draw(row, 0, 0);
-        return { check: () => t * 10 + o === n };
+        return { check: () => t * 10 + o === n, why: () => (t * 10 + o > n ? '구슬이 너무 많아. 조금 빼 봐.' : '구슬이 모자라. 더 넣어 봐.') };
       },
     },
     clock: {
@@ -1396,7 +1473,12 @@ body { margin: 0; overscroll-behavior: none; }
         s.addEventListener('pointerup', end);
         s.addEventListener('pointercancel', end);
         paint();
-        return { check: () => shown() === goal, say: (m ? `${h}시 ${m}분으로` : `${h}시로`) + ' 시계를 맞춰 봐.' };
+        const why = () => {
+          const T = shown();
+          if (T % 60 === goal % 60) return '짧은바늘이 가리키는 숫자가 달라.';
+          return Math.floor(T / 60) === Math.floor(goal / 60) ? '긴바늘이 가리키는 곳이 달라.' : '바늘 두 개가 모두 달라.';
+        };
+        return { check: () => shown() === goal, why, say: (m ? `${h}시 ${m}분으로` : `${h}시로`) + ' 시계를 맞춰 봐.' };
       },
     },
     calendar: {
@@ -1474,7 +1556,7 @@ body { margin: 0; overscroll-behavior: none; }
           if (quiz.busy || !cell || !cell.classList || !cell.classList.contains('pc') || cell.classList.contains('on')) return;
           const k = +cell.dataset.k;
           if (k !== sel) {
-            if (tap) { buzz(); say(pick(RETRY)); quiz.miss++; if (quiz.miss >= 2) sws[k].classList.add('nudge'); }
+            if (tap) { miss(null, '그 칸은 지금 고른 색의 숫자가 아니야.'); if (quiz.miss >= 2) sws[k].classList.add('nudge'); }
             return;
           }
           cell.classList.add('on'); cell.style.background = ink(chars[k]); cell.textContent = '';
@@ -1517,7 +1599,7 @@ body { margin: 0; overscroll-behavior: none; }
           answer: ans,
           choices: options(ans, [ans - 1, ans + 1, ans + 2, ans - 2, 10]),
           reveal: () => { eq.lastChild.textContent = ans; },
-          say: lv === 2 ? `${a} 더하기 ${b}. 10을 만들면 몇이 남을까?` : `${a} 더하기 ${b}는 몇일까?`,
+          say: lv === 2 ? `${a} 더하기 ${b}. 10을 만들면 몇이 남을까?` : `${a} 더하기 ${b}. 모두 몇일까?`,
         };
       },
     },
@@ -1601,38 +1683,43 @@ body { margin: 0; overscroll-behavior: none; }
           answer: ans,
           choices: options(ans, [ans - 1, ans + 1, ans + 2, ans - 2]),
           reveal: () => { ask.textContent = ans; },
+          why: v => (v > ans ? '그러면 물음표 쪽이 더 무거워져.' : '그러면 물음표 쪽이 더 가벼워져.'),
           say: '저울 양쪽이 똑같아야 해. 물음표는 몇일까?',
         };
       },
     },
     hundred: {
       title: '폴짝폴짝',
-      tips: ['옆 칸으로 가면 하나씩 커져.', '옆으로 가면 1, 아래로 가면 10이 커져.', '보이는 수에서 한 칸씩 가 봐. 옆은 1, 아래는 10이야.'],
+      tips: ['옆 칸으로 가면 하나씩 커져.', '바로 윗줄의 수보다 10 큰 수야.', '보이는 수에서 한 칸씩 가 봐. 옆은 1, 아래는 10이야.'],
       // 수 배열표: 옆은 +1, 아래는 +10. ★ 표에서 빈칸, ★★ 조각에서 이웃 칸, ★★★ 조각에서 먼 칸
       next(lv, box) {
-        const grid = el('div', lv === 0 ? 'hund' : 'hund frag');
+        const grid = el('div', lv === 2 ? 'hund frag' : 'hund');
         let ans = 0, ask = null;
         const cell = (v, kind) => {
           const c = el('div', kind === 'show' ? 'day' : 'day ' + kind, kind === 'ask' ? '?' : kind === 'hide' ? null : String(v));
           if (kind === 'ask') ask = c;
           grid.appendChild(c);
         };
-        if (lv === 0) {
-          const r0 = rnd(0, 5) * 10;
+        if (lv < 2) {
+          // 다섯 줄짜리 표. ★은 물음표만 비고, ★★는 물음표가 있는 줄이 통째로 비어서 윗줄·아랫줄을 봐야 한다.
+          const r0 = rnd(0, 5) * 10, row = v => Math.floor((v - 1) / 10);
           ans = r0 + rnd(1, 50);
           grid.style.setProperty('--n', 10);
-          for (let v = r0 + 1; v <= r0 + 50; v++) cell(v, v === ans ? 'ask' : 'show');
+          for (let v = r0 + 1; v <= r0 + 50; v++) cell(v, v === ans ? 'ask' : lv === 1 && row(v) === row(ans) ? 'hide' : 'show');
         } else {
-          const top = rnd(0, 7) * 10 + rnd(1, 8); // 가로세로 세 칸짜리 조각의 왼쪽 위 수
-          const val = k => top + Math.floor(k / 3) * 10 + k % 3, far = (p, q) => Math.abs(Math.floor(p / 3) - Math.floor(q / 3)) + Math.abs(p % 3 - q % 3);
-          const given = lv === 1 ? 4 : pick([0, 2, 6, 8]);
-          let q;
-          do { q = rnd(0, 8); } while (q === given || (lv === 2 && far(q, given) < 2));
+          // 가로세로 다섯 칸짜리 조각. 수 여덟 개가 보이고, 그중 하나는 물음표와 같은 줄에 있다.
+          const top = rnd(0, 5) * 10 + rnd(1, 6), val = k => top + Math.floor(k / 5) * 10 + k % 5, q = rnd(0, 24);
+          const others = shuffle(Array.from({ length: 25 }, (_, i) => i).filter(k => k !== q));
+          const mate = others.find(k => k % 5 === q % 5 || Math.floor(k / 5) === Math.floor(q / 5));
+          const keep = new Set([mate, ...others.filter(k => k !== mate).slice(0, 7)]);
           ans = val(q);
-          grid.style.setProperty('--n', 3);
-          for (let k = 0; k < 9; k++) cell(val(k), k === q ? 'ask' : k === given ? 'show' : 'hide');
+          grid.style.setProperty('--n', 5);
+          for (let k = 0; k < 25; k++) cell(val(k), k === q ? 'ask' : keep.has(k) ? 'show' : 'hide');
         }
-        box.appendChild(grid);
+        // 규칙을 그림으로 알려 준다: 옆으로 +1, 아래로 +10
+        const leg = el('div', 'leg');
+        leg.append(el('span', '', '→ +1'), el('span', '', '↓ +10'));
+        box.append(leg, grid);
         return {
           answer: ans,
           choices: options(ans, [ans - 1, ans + 1, ans - 10, ans + 10, ans + 9, ans + 11, ans - 9, ans - 11].filter(v => v >= 1 && v <= 100)),
@@ -1670,40 +1757,81 @@ body { margin: 0; overscroll-behavior: none; }
         box.append(shop, purse);
         if (lv < 2) box.appendChild(total);
         box.appendChild(row);
-        return { check: () => sum === price, say: `${price}원이야. 동전을 눌러서 딱 맞게 내 봐.` };
+        const why = () => (sum > price ? `${sum - price}원 더 냈어. 동전을 눌러서 빼 봐.` : `${price - sum}원이 모자라. 더 내 봐.`);
+        return { check: () => sum === price, why, say: `${price}원이야. 동전을 눌러서 딱 맞게 내 봐.` };
       },
     },
     magic: {
       title: '뾰로롱',
-      tips: ['한 줄을 더하면 동그라미 안의 수가 돼.', '숫자가 둘 다 보이는 줄을 찾아봐.', '숫자가 둘 다 보이는 줄을 찾아봐. 더해서 동그라미 수가 되어야 해.'],
-      // 마방진: 가로, 세로 어느 줄을 더해도 같은 수. 물음표가 있는 줄 하나는 늘 다 보인다.
+      rounds: 3,
+      tips: ['숫자가 두 개 보이는 줄부터 해 봐. 세 수를 더하면 15가 되어야 해.', '숫자가 두 개 보이는 줄부터 해 봐. 세 수를 더하면 15가 되어야 해.', '빈칸이 하나뿐인 줄을 먼저 찾아봐. 채우고 나면 다음 줄이 보여.'],
+      // 마방진: 스도쿠처럼 빈칸을 모두 채운다. 아래 숫자 타일을 빈칸에 넣어서 가로줄, 세로줄 합을 모두 15로 만든다.
+      // 줄 끝 동그라미는 그 줄이 맞으면 초록, 틀리면 빨강이 된다. ★ 빈칸 2개, ★★ 4개, ★★★ 5개
       next(lv, box) {
         let m = [[2, 7, 6], [9, 5, 1], [4, 3, 8]];
         if (rnd(0, 1)) m = m[0].map((_, i) => m.map(r => r[i]));
         if (rnd(0, 1)) m = m.slice().reverse();
         if (rnd(0, 1)) m = m.map(r => r.slice().reverse());
-        const k = lv === 2 ? rnd(1, 5) : 0, sum = 15 + 3 * k, qr = rnd(0, 2), qc = rnd(0, 2), byRow = rnd(0, 1) === 1;
-        const free = [];
-        for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) if (!(r === qr && c === qc) && (byRow ? r !== qr : c !== qc)) free.push(r * 3 + c);
-        const hidden = new Set(shuffle(free).slice(0, [0, 2, 3][lv])), grid = el('div', 'magic'), ans = m[qr][qc] + k;
-        let ask = null;
-        for (let r = 0; r < 3; r++) {
-          for (let c = 0; c < 3; c++) {
-            const hit = r === qr && c === qc, hide = hidden.has(r * 3 + c);
-            const d = el('div', hit ? 'mc ask' : hide ? 'mc hide' : 'mc', hit ? '?' : hide ? null : String(m[r][c] + k));
-            if (hit) ask = d;
-            grid.appendChild(d);
+        const sol = m.flat(), SUM = 15, rows = [0, 1, 2].map(r => [r * 3, r * 3 + 1, r * 3 + 2]), cols = [0, 1, 2].map(c => [c, c + 3, c + 6]);
+        // 빈칸이 하나뿐인 줄을 차례로 채워 가면 끝까지 풀리는 배치만 쓴다
+        const solvable = set => {
+          const b = new Set(set);
+          for (let moved = true; b.size && moved;) {
+            moved = false;
+            for (const L of rows.concat(cols)) { const e = L.filter(k => b.has(k)); if (e.length === 1) { b.delete(e[0]); moved = true; } }
           }
-          grid.appendChild(el('div', 'msum', String(sum)));
-        }
-        for (let c = 0; c < 3; c++) grid.appendChild(el('div', 'msum', String(sum)));
-        box.appendChild(grid);
-        return {
-          answer: ans,
-          choices: options(ans, [ans - 1, ans + 1, ans + 2, ans - 2, 5 + k]),
-          reveal: () => { ask.textContent = ans; },
-          say: `가로로 더해도, 세로로 더해도 모두 ${sum}. 물음표는 몇일까?`,
+          return b.size === 0;
         };
+        let blanks;
+        do { blanks = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8]).slice(0, [2, 4, 5][lv]); } while (!solvable(blanks));
+        const val = sol.map((v, k) => (blanks.includes(k) ? null : v)), cells = [], from = {}; // from: 칸에 놓인 타일
+        const grid = el('div', 'magic'), pad = el('div', 'pad'), rowSum = [], colSum = [];
+        let sel = Math.min(...blanks);
+        const refresh = () => {
+          cells.forEach((c, k) => { if (c.tagName === 'BUTTON') c.className = 'mc slot' + (k === sel ? ' sel' : '') + (val[k] !== null ? ' user' : ''); });
+          const mark = (L, dot) => {
+            const vs = L.map(k => val[k]), full = vs.every(v => v !== null), good = vs.reduce((a, v) => a + v, 0) === SUM;
+            dot.className = 'msum' + (full ? (good ? ' ok' : ' bad') : '');
+            return full && good;
+          };
+          return rows.map((L, i) => mark(L, rowSum[i])).concat(cols.map((L, i) => mark(L, colSum[i]))).every(Boolean);
+        };
+        for (let k = 0; k < 9; k++) {
+          const blank = val[k] === null, c = el(blank ? 'button' : 'div', 'mc', blank ? null : String(val[k]));
+          if (blank) {
+            c.type = 'button'; c.id = 'mc-' + k;
+            c.setAttribute('aria-label', '빈칸');
+            c.addEventListener('click', () => {
+              if (quiz.busy) return;
+              wake();
+              if (val[k] !== null) { from[k].style.visibility = ''; val[k] = null; c.textContent = ''; } // 넣은 수를 누르면 도로 뺀다
+              sel = k; refresh();
+            });
+          }
+          cells.push(c); grid.appendChild(c);
+          if (k % 3 === 2) { const dot = el('div', 'msum', String(SUM)); rowSum.push(dot); grid.appendChild(dot); }
+        }
+        for (let c = 0; c < 3; c++) { const dot = el('div', 'msum', String(SUM)); colSum.push(dot); grid.appendChild(dot); }
+        blanks.map(k => sol[k]).sort((a, b) => a - b).forEach(v => {
+          const t = el('button', 'ntile', String(v));
+          t.type = 'button'; t.id = 'nt-' + v;
+          t.addEventListener('click', () => {
+            if (quiz.busy || sel === null) return;
+            wake();
+            val[sel] = v; cells[sel].textContent = v; from[sel] = t; t.style.visibility = 'hidden';
+            tone(600 + v * 30, 0, 0.07);
+            const next = blanks.slice().sort((a, b) => a - b).find(k => val[k] === null);
+            sel = next === undefined ? null : next;
+            const allGood = refresh();
+            if (sel !== null) return;
+            if (allGood) right(); // 빈칸을 다 채웠고 모든 줄이 15
+            else { miss(null, '빨간 동그라미 줄은 더해도 15가 안 돼.'); grid.classList.remove('shake'); void grid.offsetWidth; grid.classList.add('shake'); }
+          });
+          pad.appendChild(t);
+        });
+        refresh();
+        box.append(grid, pad);
+        return { custom: true, say: '빈칸을 모두 채워 봐. 어느 줄을 더해도 15가 되어야 해.' };
       },
     },
     pattern: {
@@ -1732,19 +1860,19 @@ body { margin: 0; overscroll-behavior: none; }
         }
         const letters = [...new Set(unit)];
         letters.push(String.fromCharCode(65 + letters.length)); // 규칙에 없는 모양 하나
-        return { answer: unit[hole % unit.length], choices: shuffle(letters).map(c => ({ value: c, node: () => draw(c) })) };
+        return { answer: unit[hole % unit.length], why: () => '그 모양은 지금 차례가 아니야.', choices: shuffle(letters).map(c => ({ value: c, node: () => draw(c) })) };
       },
     },
   };
 
   const quiz = { id: '', level: 1, n: 0, goal: 5, cur: null, busy: false, won: false, miss: 0, line: '' };
   const PRAISE = ['딩동댕!', '우와, 맞았어!', '잘했어!', '바로 그거야!'];
-  const RETRY = ['다시 해 볼까?', '괜찮아, 한 번 더!', '음, 다른 건 어떨까?'];
+  const RETRY = ['아쉬워! 다시 해 보자.', '괜찮아, 한 번 더!', '아깝다! 다시 해 볼까?'];
   const HOST = { bonds: 'dong', bundles: 'dong', clock: 'dong', calendar: 'dong', pattern: 'semo', color: 'kkom', dots: 'semo',
     make10: 'dong', pyramid: 'dong', train: 'dong', scale: 'dong', hundred: 'dong', coins: 'kkom', magic: 'semo' };
   const progress = () => $('qprog').replaceChildren(...Array.from({ length: quiz.goal }, (_, i) => el('span', i < quiz.n ? 'on' : '')));
   function ask(queue) {
-    quiz.busy = false; quiz.won = false; quiz.miss = 0; $('qwin').hidden = true;
+    quiz.busy = false; quiz.won = false; quiz.miss = 0; $('qwin').hidden = true; $('cheer').hidden = true;
     const box = $('qstage'), row = $('qchoices'), g = GAMES[quiz.id];
     box.replaceChildren(); row.replaceChildren(); progress();
     [0, 1, 2].forEach(n => $('ql-' + n).setAttribute('aria-pressed', String(n === quiz.level)));
@@ -1752,8 +1880,17 @@ body { margin: 0; overscroll-behavior: none; }
     const cur = quiz.cur = g.next(quiz.level, box);
     const shownText = box.querySelector('.qtext');
     quiz.line = cur.say || (shownText ? shownText.textContent : '');
+    // 무엇을 하는 놀이인지 글로도 적어 둔다 (글을 몰라도 풀 수 있지만, 읽을 줄 아는 아이에게는 도움이 된다)
+    if (!shownText && cur.say) box.prepend(el('p', 'qtext', cur.say));
     if (cur.check && quiz.n === 0) quiz.line += ' 다 되면 아래 단추를 눌러 봐.';
     say(quiz.line, queue);
+    // 왜 틀렸는지: 놀이가 따로 알려 주면 그 말을 쓰고, 아니면 고른 수가 큰지 작은지를 알려 준다
+    const explain = v => {
+      const own = cur.why ? cur.why(v) : '';
+      if (own) return own;
+      if (typeof v !== 'number' || typeof cur.answer !== 'number') return '';
+      return v > cur.answer ? '너무 커. 더 작은 수야.' : '너무 작아. 더 큰 수야.';
+    };
     if (cur.choices) {
       cur.choices.forEach((c, i) => {
         const b = el('button', 'choice', c.text);
@@ -1763,7 +1900,7 @@ body { margin: 0; overscroll-behavior: none; }
           if (quiz.busy) return;
           wake();
           if (c.value === cur.answer) { b.classList.add('yes'); right(); }
-          else miss(b);
+          else miss(b, explain(c.value));
         });
         if (c.value === cur.answer) b.dataset.ok = '1';
         row.appendChild(b);
@@ -1776,7 +1913,7 @@ body { margin: 0; overscroll-behavior: none; }
         if (quiz.busy) return;
         wake();
         if (cur.check()) { b.classList.add('yes'); right(); }
-        else { miss(null); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+        else { miss(null, explain()); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
       });
       row.appendChild(b);
     }
@@ -1787,24 +1924,60 @@ body { margin: 0; overscroll-behavior: none; }
     quiz.n++; progress();
     if (quiz.n >= quiz.goal) {
       quiz.won = true;
+      cheer(pick(PRAISE)); // 마지막 문제도 딱지를 먼저 보여 주고 칭찬 화면으로 간다
       setTimeout(() => {
         if (!quiz.won) return;
-        $('qwin').hidden = false; fanfare(); confetti($('qfx'), () => quiz.won);
+        $('qwin').hidden = false; $('cheer').hidden = true; fanfare(); confetti($('qfx'), () => quiz.won);
         say('참 잘했어! 정말 멋지다. 한 번 더 할까?');
       }, 600);
     } else {
-      say(pick(PRAISE));
-      setTimeout(() => { if (quiz.busy) ask(true); }, 900);
+      const word = pick(PRAISE);
+      say(word); cheer(word);
+      setTimeout(() => { if (quiz.busy) ask(true); }, 1000);
     }
   }
+  // 맞혔을 때 잠깐 뜨는 초록 칭찬 딱지
+  let cheerTimer = 0;
+  function cheer(word) { feedback(true, word, ''); }
+  // 꼼지 얼굴: 맞히면 웃고, 틀리면 눈썹이 처지고 눈물이 한 방울 난다
+  function mood(good) {
+    const s = mk('svg', { viewBox: '0 0 44 44', class: 'host', 'aria-hidden': 'true' });
+    mk('rect', { x: 4, y: 4, width: 36, height: 36, rx: 10, class: 'c3', transform: good ? 'rotate(-8 22 22)' : 'rotate(6 22 22)' }, s);
+    if (good) {
+      mk('path', { d: 'M11 20 Q14.5 15 18 20 M26 20 Q29.5 15 33 20 M15 26 Q22 34 29 26', class: 'feat' }, s);
+      mk('circle', { cx: 10.5, cy: 27, r: 3, class: 'cheek' }, s);
+      mk('circle', { cx: 33.5, cy: 27, r: 3, class: 'cheek' }, s);
+    } else {
+      mk('path', { d: 'M10 19 L17 15.5 M34 19 L27 15.5 M17 32 Q22 27.5 27 32', class: 'feat' }, s); // 눈썹 바깥쪽이 처진 아쉬운 얼굴
+      mk('circle', { cx: 15, cy: 23, r: 2.2, class: 'eye' }, s);
+      mk('circle', { cx: 29, cy: 23, r: 2.2, class: 'eye' }, s);
+      mk('path', { d: 'M32 26 Q29.5 30.5 32 33 Q34.5 30.5 32 26 Z', class: 'tear' }, s);
+    }
+    return s;
+  }
+  // good이 참이면 칭찬(1초), 거짓이면 아쉬운 얼굴과 함께 이유를 보여 준다(3초 남짓)
+  function feedback(good, title, detail) {
+    const c = $('cheer'), words = el('span');
+    words.appendChild(el('b', '', title));
+    if (detail) words.appendChild(el('small', '', detail));
+    c.className = 'fb ' + (good ? 'good' : 'bad');
+    c.replaceChildren(mood(good), words);
+    c.hidden = false;
+    c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
+    clearTimeout(cheerTimer);
+    cheerTimer = setTimeout(() => { c.hidden = true; }, good ? 950 : 3400);
+  }
   // 틀렸을 때: 처음에는 다시 해 보라고 하고, 두 번째부터는 엄마처럼 살짝 알려 준다
-  function miss(btn) {
+  // why: 왜 틀렸는지 한마디. 그 뒤에 이 단계의 도움말을 붙여서 보여 주고 읽어 준다.
+  function miss(btn, why) {
     if (btn) { btn.classList.add('no'); btn.disabled = true; }
     buzz(); quiz.miss++;
-    if (quiz.miss < 2) { say(pick(RETRY)); return; }
+    const title = pick(RETRY), tip = GAMES[quiz.id].tips[quiz.level], detail = why ? why + ' ' + tip : tip;
+    feedback(false, title, detail);
+    say(title + ' ' + detail);
+    if (quiz.miss < 2) return;
     const ok = $('view-quiz').querySelector('[data-ok]');
-    if (ok) { ok.classList.add('nudge'); say('여기를 한번 볼까?'); }
-    else say(GAMES[quiz.id].tips[quiz.level]);
+    if (ok) ok.classList.add('nudge'); // 두 번 틀리면 정답 쪽이 살짝 움직인다
   }
   function openQuiz(id) {
     quiz.id = id; quiz.n = 0; quiz.goal = GAMES[id].rounds || 5;
@@ -1928,14 +2101,12 @@ body { margin: 0; overscroll-behavior: none; }
   $('hint-btn').textContent = '?';
   $('hint-btn').setAttribute('aria-label', '힌트');
   ['level-', 'ql-'].forEach(pre => [0, 1, 2].forEach(n => {
-    $(pre + n).textContent = '★'.repeat(n + 1);
-    $(pre + n).setAttribute('aria-label', ['쉬움', '보통', '어려움'][n]);
+    $(pre + n).textContent = '★'.repeat(n + 1) + ' ' + ['쉬움', '보통', '어려움'][n];
   }));
   [1, 2].forEach(n => {
     const s = mk('svg', { viewBox: '0 0 4 4', 'aria-hidden': 'true' });
     SQUARE.forEach(q => mk('polygon', { points: pts(q) }, s));
-    $('sets-' + n).replaceChildren(s, document.createTextNode('×' + n));
-    $('sets-' + n).setAttribute('aria-label', `칠교 ${n}개`);
+    $('sets-' + n).replaceChildren(s, document.createTextNode(`조각 ${n * 7}개`));
   });
   ['home-t', 'home-q', 'qhome'].forEach(id => $(id).addEventListener('click', () => show('home')));
   const TILES = [
@@ -1966,11 +2137,8 @@ body { margin: 0; overscroll-behavior: none; }
     $('tiles').appendChild(b);
   });
   // 잠깐 놀기: 꼼지가 놀이 하나를 골라 준다
-  const quickText = el('span');
-  quickText.append(el('b', '', '잠깐 놀기'), el('small', '', '꼼지가 놀이를 골라줄게!'));
-  const quickGo = ico('next');
-  quickGo.classList.add('go');
-  $('quick').append(ico('clock'), quickText, quickGo);
+  $('quick').append(ico('next'), el('b', '', '잠깐 놀기'));
+  $('quick').setAttribute('aria-label', '잠깐 놀기: 꼼지가 놀이를 골라 줘요');
   $('quick').addEventListener('click', () => go(pick(TILES).id));
   $('mascot-home').replaceChildren(mascot());
   document.querySelectorAll('.win-mj').forEach(n => n.replaceChildren(mascot()));
