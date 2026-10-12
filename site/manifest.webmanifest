@@ -1,0 +1,24 @@
+{
+  "name": "꼼지",
+  "short_name": "꼼지",
+  "description": "아이는 놀고, 엄마는 쉬고.",
+  "lang": "ko",
+  "start_url": "./",
+  "display": "fullscreen",
+  "background_color": "#FFF8E7",
+  "theme_color": "#FFF8E7",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

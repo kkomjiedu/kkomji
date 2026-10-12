@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>꼼지</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<style>
+/* 한 화면 놀이판: 위에 그림 고르기, 왼쪽(세로 화면은 위)에 맞추는 판, 오른쪽(아래)에 조각 놓는 곳 */
+:root {
+  /* 꼼지 브랜드: 써니 옐로 #F7C948, 소프트 코랄 #FF8B7B, 스카이 블루 #8EC3F4, 차콜 #4A4A4A */
+  --bg: #FFF8E7;
+  --panel: #FFFFFF;
+  --tray: #FFF3D4;
+  --ink: #3F3F3F;
+  --soft: #7B7468;
+  --line: #EBDDB9;
+  --slot: #EAE1CB;
+  --accent: #F7C948;
+  --on-accent: #3A3A3A;
+  --pop: #EE6A5A;
+  --limb: #4A4A4A;
+  --bar: #3F3F3F;
+  --on-bar: #FFF8E7;
+  --shadow: rgba(74, 60, 20, .24);
+  /* 아래 색은 밝은 화면과 어두운 화면에서 같게 쓴다 */
+  --on-fill: #3A3A3A;
+  --on-tile: #3F3F3F;
+  --paper: #FFFDF6;
+  --t-yellow: #FBD968; --t-blue: #B7D9F8; --t-coral: #FFB3A7; --t-sage: #BEDDCB;
+  --p0: #FF8B7B; --p1: #8EC3F4; --p2: #86C6A6; --p3: #F7C948;
+  --p4: #FFAA5C; --p5: #B79DEA; --p6: #6FCBCB;
+  --font: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1E1D1B; --panel: #2E2C29; --tray: #262422; --ink: #F8F2E2; --soft: #B8B0A0;
+    --line: #4B4741; --slot: #47433D; --pop: #FF8B7B; --limb: #8F887B; --bar: #121110;
+    --shadow: rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1E1D1B; --panel: #2E2C29; --tray: #262422; --ink: #F8F2E2; --soft: #B8B0A0;
+  --line: #4B4741; --slot: #47433D; --pop: #FF8B7B; --limb: #8F887B; --bar: #121110;
+  --shadow: rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  display: flex; flex-direction: column; gap: 10px;
+  padding-inline: 16px; padding-block: 12px;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font); font-size: 18px;
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.bar h1 { margin: 0 8px 0 0; font-size: 1.9rem; font-weight: 400; line-height: 1; }
+.group { display: flex; flex-wrap: wrap; gap: 8px; }
+.group.end { margin-left: auto; }
+/* 그림 버튼은 한 줄로 두고, 넘치면 옆으로 밀어서 본다 */
+#picker { flex-wrap: nowrap; overflow-x: auto; padding-block: 2px; scrollbar-width: thin; }
+#picker .chip { flex: none; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 0 15px;
+  border: 2px solid var(--line); border-radius: 999px;
+  background: var(--panel); color: var(--ink);
+  font: inherit; font-size: 1.25rem; line-height: 1; cursor: pointer;
+}
+.chip svg { width: 26px; height: 26px; fill: currentColor; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chip:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.stage { position: relative; flex: 1; min-height: 0; }
+#svg { display: block; width: 100%; height: 100%; touch-action: none; }
+.board { fill: var(--panel); }
+.tray { fill: var(--tray); stroke: var(--line); stroke-width: 3; stroke-dasharray: 10 10; }
+.slot { fill: var(--slot); stroke: var(--panel); stroke-width: 3; stroke-dasharray: 9 7; stroke-linejoin: round; }
+.plain .slot { stroke: var(--slot); stroke-dasharray: none; }
+.piece { cursor: grab; }
+.piece polygon { stroke: var(--panel); stroke-width: 3; stroke-linejoin: round; }
+.piece.drag { cursor: grabbing; filter: drop-shadow(0 8px 8px var(--shadow)); }
+.piece.placed { cursor: default; }
+.c0 { fill: var(--p0); } .c1 { fill: var(--p1); } .c2 { fill: var(--p2); } .c3 { fill: var(--p3); }
+.c4 { fill: var(--p4); } .c5 { fill: var(--p5); } .c6 { fill: var(--p6); }
+
+#fx, #qfx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.win { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.win-card {
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 28px 32px; border-radius: 28px;
+  background: var(--panel); box-shadow: 0 14px 40px var(--shadow);
+  text-align: center;
+}
+.win-card h2 { margin: 0; font-size: 2.4rem; font-weight: 400; }
+.win-card .group { justify-content: center; }
+.win-card .chip { min-height: 60px; padding: 0 28px; font-size: 1.5rem; }
+
+.hint { margin: 0; text-align: center; color: var(--soft); font-size: 1.05rem; }
+
+/* ---------- 화면 나누기: 첫 화면 / 칠교 / 문제 놀이 ---------- */
+.view { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.chip.big { min-height: 60px; padding: 0 22px; font-size: 1.4rem; }
+
+/* 첫 화면: 꼼지가 인사하고, 색 타일로 놀이를 고른다 */
+.hello { display: flex; align-items: center; gap: 14px; }
+.hello .mj { width: 92px; height: 92px; flex: none; }
+.hello h1 { margin: 0; font-size: 2rem; font-weight: 400; line-height: 1.15; text-wrap: balance; }
+.hello p { margin: 4px 0 0; color: var(--soft); font-size: 1.1rem; }
+.hello .group { margin-left: auto; flex: none; }
+.tiles {
+  flex: 1; min-height: 0; overflow-y: auto; padding-block: 2px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; align-content: start;
+}
+.quick {
+  display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+  border: 0; border-radius: 22px; background: var(--bar); color: var(--on-bar);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.quick b { display: block; font-weight: 400; font-size: 1.3rem; }
+.quick small { font-size: 1rem; opacity: .8; }
+.quick .ico { width: 30px; height: 30px; flex: none; }
+.quick .go { margin-left: auto; }
+.quick:focus-visible { outline: 3px solid var(--pop); outline-offset: 2px; }
+.brandline { margin: 0; text-align: center; color: var(--soft); font-size: .95rem; }
+
+/* 캐릭터: 꼼지(노란 네모), 동글(파란 동그라미), 세모(코랄 세모) */
+.mj .body { fill: var(--accent); }
+.mj .limb { fill: none; stroke: var(--limb); stroke-width: 9; stroke-linecap: round; }
+.mj .tri { fill: var(--p1); }
+.mj .spark { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; }
+.mj .cheek { fill: var(--p0); }
+.mj .eye, .host .eye { fill: var(--on-tile); }
+.mj .feat, .host .feat { fill: none; stroke: var(--on-tile); stroke-linecap: round; stroke-linejoin: round; }
+.mj .feat { stroke-width: 4; }
+.host { width: 44px; height: 44px; flex: none; }
+.host .feat { stroke-width: 2.4; }
+.host .round { stroke: var(--p0); stroke-width: 5; stroke-linejoin: round; }
+#host-t, #host-q { display: flex; }
+.win-mj .mj { display: block; width: 120px; height: 120px; }
+
+.prog span { width: 22px; height: 22px; border: 3px solid var(--line); border-radius: 50%; }
+.prog span.on { background: var(--p3); border-color: var(--p3); }
+
+.qwrap {
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 16px; border-radius: 24px; background: var(--panel); overflow-y: auto;
+}
+.qstage { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; margin-top: auto; }
+.qchoices { justify-content: center; gap: 12px; margin-bottom: auto; }
+.qtext { margin: 0; font-size: 1.7rem; text-align: center; text-wrap: balance; }
+.qsub { margin: 0; font-size: 1.2rem; color: var(--soft); }
+.bigtime { margin: 0; font-size: 2.6rem; color: var(--pop); }
+
+.choice {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 84px; min-height: 76px; padding: 0 20px;
+  border: 3px solid var(--line); border-radius: 22px;
+  background: var(--panel); color: var(--ink);
+  font: inherit; font-size: 2.1rem; line-height: 1; cursor: pointer;
+}
+.choice svg { width: 48px; height: 48px; }
+.choice.yes { background: var(--p2); border-color: var(--p2); color: var(--on-fill); }
+.choice.no { opacity: .35; }
+.choice:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.bond { width: min(320px, 70vw); height: auto; }
+.bond line { stroke: var(--line); stroke-width: 6; }
+.bond .node circle { fill: var(--tray); stroke: var(--line); stroke-width: 4; }
+.bond .ask circle { fill: var(--panel); stroke: var(--pop); stroke-dasharray: 8 6; }
+.bond text, .clock text { fill: var(--ink); text-anchor: middle; dominant-baseline: central; font-family: var(--font); }
+.bond text { font-size: 40px; }
+.beads { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 330px; }
+.bead { width: 26px; height: 26px; border-radius: 50%; }
+.bead.b1 { background: var(--p1); }
+.bead.b4 { background: var(--p4); }
+
+.count-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 22px; min-height: 236px; }
+.tens { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 8px; }
+.bundle { display: flex; flex-direction: column; gap: 3px; padding: 5px; border: 2px solid var(--line); border-radius: 10px; background: var(--tray); }
+.bundle i, .ones i { display: block; width: 18px; height: 18px; border-radius: 50%; background: var(--p0); }
+.ones { display: grid; grid-template-columns: repeat(3, 18px); gap: 4px; align-content: end; }
+.ones i { background: var(--p3); }
+.steppers { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+.seq { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+.cell { display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 14px; font-size: 2rem; }
+.cell svg { width: 52px; height: 52px; }
+.cell.num { background: var(--tray); }
+.cell.blank { border: 3px dashed var(--pop); color: var(--pop); }
+
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: min(540px, 100%); }
+.dow { text-align: center; color: var(--soft); font-size: 1.15rem; }
+.dow.sun { color: var(--p0); }
+.dow.sat { color: var(--p1); }
+.day {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 50px; padding: 0; border: 2px solid var(--line); border-radius: 12px;
+  background: var(--panel); color: var(--ink); font: inherit; font-size: 1.4rem; line-height: 1;
+}
+button.day { cursor: pointer; }
+.day.ref { border: 3px solid var(--pop); background: var(--tray); }
+.day.hide { border-style: dashed; background: transparent; }
+.day.ask { border: 3px dashed var(--pop); color: var(--pop); font-size: 1.7rem; }
+
+.gi .dab { stroke: var(--paper); stroke-width: 3; }
+.paint { width: min(46vh, 84vw, 430px); max-height: 52vh; height: auto; touch-action: manipulation; }
+.paint polygon { stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; vector-effect: non-scaling-stroke; cursor: pointer; }
+.paint .blank { fill: var(--panel); }
+.paint text { fill: var(--ink); text-anchor: middle; dominant-baseline: central; font-family: var(--font); pointer-events: none; }
+.swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.sw {
+  width: 62px; height: 62px; padding: 0; border: 4px solid var(--panel); border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--line); color: var(--on-tile);
+  font: inherit; font-size: 1.6rem; line-height: 1; cursor: pointer;
+}
+.sw[aria-pressed="true"] { box-shadow: 0 0 0 5px var(--ink); transform: scale(1.08); }
+.sw.nudge { box-shadow: 0 0 0 5px var(--pop); }
+.sw:focus-visible { outline: 3px solid var(--ink); outline-offset: 6px; }
+.sw.k0 { background: var(--p0); } .sw.k1 { background: var(--p1); } .sw.k2 { background: var(--p2); } .sw.k3 { background: var(--p3); }
+.sw.k4 { background: var(--p4); } .sw.k5 { background: var(--p5); } .sw.k6 { background: var(--p6); }
+.day.yes { background: var(--p2); border-color: var(--p2); color: var(--on-fill); }
+.day.no { opacity: .35; }
+.day:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.clock .knob { stroke: var(--panel); stroke-width: 3; }
+.clock .k0 { fill: var(--p0); }
+.clock .k1 { fill: var(--p1); }
+.clock { width: min(52vh, 84vw, 440px); height: auto; touch-action: none; cursor: grab; }
+.clock .face { fill: var(--tray); stroke: var(--ink); stroke-width: 5; }
+.clock text { font-size: 26px; }
+.clock .tick { stroke: var(--soft); stroke-width: 2; }
+.clock .hh { stroke: var(--p0); stroke-width: 11; stroke-linecap: round; }
+.clock .mh { stroke: var(--p1); stroke-width: 7; stroke-linecap: round; }
+.clock .pin { fill: var(--ink); }
+
+/* 글자 대신 쓰는 그림 단추 */
+.chip svg.ico { width: 28px; height: 28px; }
+.ico { fill: none; stroke: currentColor; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.chip svg.ico { fill: none; }
+.win-card .chip svg.ico { width: 40px; height: 40px; }
+.tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 14px 18px 16px;
+  border: 0; border-radius: 22px;
+  background: var(--t-yellow); color: var(--on-tile);
+  font: inherit; line-height: 1.15; text-align: left; cursor: pointer;
+}
+.tile.blue { background: var(--t-blue); }
+.tile.coral { background: var(--t-coral); }
+.tile.sage { background: var(--t-sage); }
+.tile .gi { align-self: center; }
+.tile b { font-weight: 400; font-size: 1.6rem; }
+.tile small { font-size: 1.05rem; opacity: .78; }
+.tile:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.gi { width: 84px; height: 84px; }
+.gi .ln { fill: none; stroke: var(--on-tile); stroke-width: 4; stroke-linecap: round; }
+.gi .ln.h0 { stroke: var(--p0); }
+.gi .ln.h1 { stroke: var(--p1); }
+.gi .box { fill: var(--paper); stroke: var(--on-tile); stroke-width: 3; }
+.gi .qm { fill: var(--on-tile); font-size: 26px; text-anchor: middle; dominant-baseline: central; font-family: var(--font); }
+.dow.ref { border-radius: 10px; background: var(--accent); color: var(--on-accent); }
+
+@keyframes nudge { 50% { transform: scale(1.12); } }
+.nudge { border-color: var(--pop); animation: nudge .8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .nudge { animation: none; border-width: 5px; } }
+
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.shake { animation: shake .3s; }
+@media (prefers-reduced-motion: reduce) { .shake { animation: none; } }
+</style>
+<meta name="theme-color" content="#FFF8E7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="꼼지">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+html { box-sizing: border-box; overscroll-behavior: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+body { margin: 0; overscroll-behavior: none; }
+</style>
+</head>
+<body>
+<section class="view" id="view-home">
+<header class="hello">
+  <span id="mascot-home"></span>
+  <div>
+    <h1>오늘은 뭐하고 놀까?</h1>
+    <p>꼼지와 함께하는 작은 놀이</p>
+  </div>
+  <div class="group">
+    <button class="chip" id="voice-home" type="button" aria-pressed="false">말</button>
+    <button class="chip" id="sound-home" type="button" aria-pressed="true">소리</button>
+  </div>
+</header>
+<div class="tiles" id="tiles"></div>
+<button class="quick" id="quick" type="button"></button>
+<p class="brandline">꼼지 · 아이는 놀고, 엄마는 쉬고.</p>
+</section>
+
+<section class="view" id="view-tangram" hidden>
+<header class="bar">
+  <button class="chip" id="home-t" type="button">홈</button>
+  <span id="host-t"></span>
+  <h1>요리조리</h1>
+  <div class="group" role="group" aria-label="칠교 개수">
+    <button class="chip" id="sets-1" type="button" aria-pressed="true">칠교 1개</button>
+    <button class="chip" id="sets-2" type="button" aria-pressed="false">칠교 2개</button>
+  </div>
+  <div class="group" role="group" aria-label="단계">
+    <button class="chip" id="level-0" type="button" aria-pressed="false">쉬움</button>
+    <button class="chip" id="level-1" type="button" aria-pressed="true">보통</button>
+    <button class="chip" id="level-2" type="button" aria-pressed="false">어려움</button>
+  </div>
+  <div class="group end">
+    <button class="chip" id="hint-btn" type="button" hidden>힌트</button>
+    <button class="chip" id="listen-t" type="button">듣기</button>
+    <button class="chip" id="reset" type="button">다시</button>
+  </div>
+</header>
+<div class="group" id="picker" role="group" aria-label="그림 고르기"></div>
+
+<main class="stage" id="stage">
+  <svg id="svg" role="img" aria-label="칠교놀이 판"></svg>
+  <canvas id="fx"></canvas>
+  <div class="win" id="win" hidden>
+    <div class="win-card">
+      <span class="win-mj"></span>
+      <h2>참 잘했어!</h2>
+      <div class="group">
+        <button class="chip" id="again" type="button">한 번 더</button>
+        <button class="chip" id="next" type="button" aria-pressed="true">다음 그림</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<p class="hint" id="hint"></p>
+</section>
+
+<section class="view" id="view-quiz" hidden>
+<header class="bar">
+  <button class="chip" id="home-q" type="button">홈</button>
+  <span id="host-q"></span>
+  <h1 id="qtitle"></h1>
+  <div class="group" role="group" aria-label="단계">
+    <button class="chip" id="ql-0" type="button" aria-pressed="false">쉬움</button>
+    <button class="chip" id="ql-1" type="button" aria-pressed="true">보통</button>
+    <button class="chip" id="ql-2" type="button" aria-pressed="false">어려움</button>
+  </div>
+  <button class="chip" id="listen-q" type="button">듣기</button>
+  <div class="group end prog" id="qprog" aria-label="맞힌 문제"></div>
+</header>
+<div class="stage qwrap">
+  <div class="qstage" id="qstage"></div>
+  <div class="group qchoices" id="qchoices"></div>
+  <canvas id="qfx"></canvas>
+  <div class="win" id="qwin" hidden>
+    <div class="win-card">
+      <span class="win-mj"></span>
+      <h2>참 잘했어!</h2>
+      <div class="group">
+        <button class="chip" id="qhome" type="button">다른 놀이</button>
+        <button class="chip" id="qagain" type="button" aria-pressed="true">한 번 더</button>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="hint" id="qhint"></p>
+</section>
+
+<script>
+(() => {
+  // 조각 순서는 항상 큰 세모 2, 중간 세모, 작은 세모 2, 네모, 평행사변형 (색이 그림마다 같게)
+  const PUZZLES = [
+    { name: '집', pieces: [
+      { t: 'L', p: [[0, 2], [4, 2], [2, 0]] },
+      { t: 'L', p: [[0, 4], [4, 4], [2, 2]] },
+      { t: 'M', p: [[0, 2], [2, 2], [0, 4]] },
+      { t: 'S', p: [[2, 2], [4, 2], [3, 3]] },
+      { t: 'S', p: [[4, 2], [4, 4], [3, 3]] },
+      { t: 'Q', p: [[4.4, -3.6], [5.4, -2.6], [4.4, -1.6], [3.4, -2.6]] },
+      { t: 'P', p: [[2.5, -1.5], [2.5, 0.5], [3.5, 1.5], [3.5, -0.5]] },
+    ] },
+    { name: '배', pieces: [
+      { t: 'L', p: [[2, -1], [2, 1], [0, 1]] },
+      { t: 'L', p: [[2, 0], [2, 2], [4, 2]] },
+      { t: 'M', p: [[2, -3], [2, -1], [3, -2]] },
+      { t: 'S', p: [[0, 2], [1, 2], [1, 3]] },
+      { t: 'S', p: [[2, 2], [3, 2], [2, 3]] },
+      { t: 'Q', p: [[1, 2], [2, 2], [2, 3], [1, 3]] },
+      { t: 'P', p: [[2, 3], [3, 3], [4, 2], [3, 2]] },
+    ] },
+    { name: '물고기', pieces: [
+      { t: 'L', p: [[0, 2], [4, 2], [2, 0]] },
+      { t: 'L', p: [[0, 2], [4, 2], [2, 4]] },
+      { t: 'M', p: [[4, 2], [6, 2], [6, 0]] },
+      { t: 'S', p: [[4, 2], [6, 2], [5, 3]] },
+      { t: 'S', p: [[6, 2], [6, 4], [5, 3]] },
+      { t: 'Q', p: [[2, 4], [3, 3], [4, 4], [3, 5]] },
+      { t: 'P', p: [[2, 0], [3, 1], [3, -1], [2, -2]] },
+    ] },
+    { name: '고양이', pieces: [
+      { t: 'L', p: [[0, 1], [2, 1], [0, 3]] },
+      { t: 'L', p: [[2, 1], [2, 3], [0, 3]] },
+      { t: 'M', p: [[0, 5], [2, 5], [1, 4]] },
+      { t: 'S', p: [[0, 1], [0, 0], [1, 1]] },
+      { t: 'S', p: [[2, 1], [2, 0], [1, 1]] },
+      { t: 'Q', p: [[0.5, 3], [1.5, 3], [1.5, 4], [0.5, 4]] },
+      { t: 'P', p: [[2, 5], [3, 5], [4, 4], [3, 4]] },
+    ] },
+    { name: '로켓', pieces: [
+      { t: 'L', p: [[1, 1], [3, 1], [1, 3]] },
+      { t: 'L', p: [[3, 1], [3, 3], [1, 3]] },
+      { t: 'M', p: [[1, 1], [3, 1], [2, 0]] },
+      { t: 'S', p: [[1, 2], [1, 3], [0, 3]] },
+      { t: 'S', p: [[3, 2], [3, 3], [4, 3]] },
+      { t: 'Q', p: [[1.5, 3], [2.5, 3], [2.5, 4], [1.5, 4]] },
+      { t: 'P', p: [[1.5, 4], [2.5, 4], [1.5, 5], [0.5, 5]] },
+    ] },
+    { name: '나무', pieces: [
+      { t: 'L', p: [[0, 4], [2, 4], [2, 2]] },
+      { t: 'L', p: [[2, 2], [2, 4], [4, 4]] },
+      { t: 'M', p: [[1, 2], [3, 2], [2, 1]] },
+      { t: 'S', p: [[1, 1], [2, 1], [2, 0]] },
+      { t: 'S', p: [[2, 0], [2, 1], [3, 1]] },
+      { t: 'Q', p: [[1.5, 4], [2.5, 4], [2.5, 5], [1.5, 5]] },
+      { t: 'P', p: [[1.5, 5], [2.5, 5], [3.5, 6], [2.5, 6]] },
+    ] },
+    { name: '꽃', pieces: [
+      { t: 'L', p: [[0, 0], [0, 2], [2, 2]] },
+      { t: 'L', p: [[4, 0], [4, 2], [2, 2]] },
+      { t: 'M', p: [[1, 2], [3, 2], [2, 3]] },
+      { t: 'S', p: [[2.5, 3], [1.5, 3], [1.5, 4]] },
+      { t: 'S', p: [[2.5, 4], [2.5, 5], [1.5, 5]] },
+      { t: 'Q', p: [[1.5, 5], [2.5, 5], [2.5, 6], [1.5, 6]] },
+      { t: 'P', p: [[2.5, 3], [2.5, 4], [1.5, 5], [1.5, 4]] },
+    ] },
+    { name: '오리', pieces: [
+      { t: 'L', p: [[0, 2], [2, 2], [2, 4]] },
+      { t: 'L', p: [[2, 2], [4, 2], [2, 4]] },
+      { t: 'M', p: [[1, 5], [3, 5], [2, 4]] },
+      { t: 'S', p: [[4, 0], [4, 1], [5, 1]] },
+      { t: 'S', p: [[0, 2], [0, 1], [1, 2]] },
+      { t: 'Q', p: [[3, 0], [4, 0], [4, 1], [3, 1]] },
+      { t: 'P', p: [[3, 1], [4, 1], [3, 2], [2, 2]] },
+    ] },
+    { name: '화살표', pieces: [
+      { t: 'L', p: [[0, 2], [2, 2], [2, 0]] },
+      { t: 'L', p: [[2, 0], [2, 2], [4, 2]] },
+      { t: 'M', p: [[1, 6], [3, 6], [2, 5]] },
+      { t: 'S', p: [[2.5, 3], [1.5, 3], [1.5, 4]] },
+      { t: 'S', p: [[2.5, 4], [2.5, 5], [1.5, 5]] },
+      { t: 'Q', p: [[1.5, 2], [2.5, 2], [2.5, 3], [1.5, 3]] },
+      { t: 'P', p: [[2.5, 3], [2.5, 4], [1.5, 5], [1.5, 4]] },
+    ] },
+    { name: '네모', pieces: [
+      { t: 'L', p: [[0, 0], [4, 0], [2, 2]] },
+      { t: 'L', p: [[0, 0], [2, 2], [0, 4]] },
+      { t: 'M', p: [[4, 4], [2, 4], [4, 2]] },
+      { t: 'S', p: [[4, 0], [4, 2], [3, 1]] },
+      { t: 'S', p: [[2, 2], [3, 3], [1, 3]] },
+      { t: 'Q', p: [[3, 1], [4, 2], [3, 3], [2, 2]] },
+      { t: 'P', p: [[0, 4], [1, 3], [3, 3], [2, 4]] },
+    ] },
+    // 여기부터 칠교 2개(조각 14개)로 맞추는 그림
+    { name: '큰 집', pieces: [
+      { t: 'L', p: [[0, 2], [2, 2], [2, 0]] },
+      { t: 'L', p: [[2, 0], [4, 0], [2, 2]] },
+      { t: 'M', p: [[3, 2], [3, 4], [2, 3]] },
+      { t: 'S', p: [[2, 2], [3, 2], [2, 3]] },
+      { t: 'S', p: [[1, 3], [2, 4], [1, 4]] },
+      { t: 'Q', p: [[1, 2], [2, 2], [2, 3], [1, 3]] },
+      { t: 'P', p: [[1, 3], [2, 3], [3, 4], [2, 4]] },
+      { t: 'L', p: [[4, 0], [4, 2], [2, 2]] },
+      { t: 'L', p: [[4, 0], [6, 2], [4, 2]] },
+      { t: 'M', p: [[5, 2], [5, 4], [4, 3]] },
+      { t: 'S', p: [[4, 2], [5, 2], [4, 3]] },
+      { t: 'S', p: [[3, 3], [4, 4], [3, 4]] },
+      { t: 'Q', p: [[3, 2], [4, 2], [4, 3], [3, 3]] },
+      { t: 'P', p: [[3, 3], [4, 3], [5, 4], [4, 4]] },
+    ] },
+    { name: '로봇', pieces: [
+      { t: 'L', p: [[1, 2], [-1, 2], [1, 4]] },
+      { t: 'L', p: [[1, 2], [3, 2], [1, 4]] },
+      { t: 'M', p: [[0, 6], [2, 6], [1, 5]] },
+      { t: 'S', p: [[1, 0], [1, 1], [2, 1]] },
+      { t: 'S', p: [[2, 0], [3, 0], [3, 1]] },
+      { t: 'Q', p: [[1, 1], [2, 1], [2, 2], [1, 2]] },
+      { t: 'P', p: [[1, 0], [2, 0], [3, 1], [2, 1]] },
+      { t: 'L', p: [[3, 2], [3, 4], [1, 4]] },
+      { t: 'L', p: [[3, 2], [5, 2], [3, 4]] },
+      { t: 'M', p: [[2, 6], [4, 6], [3, 5]] },
+      { t: 'S', p: [[1, 4], [1, 5], [2, 5]] },
+      { t: 'S', p: [[2, 4], [3, 4], [3, 5]] },
+      { t: 'Q', p: [[2, 1], [3, 1], [3, 2], [2, 2]] },
+      { t: 'P', p: [[1, 4], [2, 4], [3, 5], [2, 5]] },
+    ] },
+    { name: '큰 로켓', pieces: [
+      { t: 'L', p: [[1, 1], [3, 1], [1, 3]] },
+      { t: 'L', p: [[1, 4], [1, 6], [-1, 6]] },
+      { t: 'M', p: [[1, 1], [3, 1], [2, 0]] },
+      { t: 'S', p: [[1, 3], [1, 4], [2, 4]] },
+      { t: 'S', p: [[2, 3], [3, 3], [3, 4]] },
+      { t: 'Q', p: [[1, 4], [2, 4], [2, 5], [1, 5]] },
+      { t: 'P', p: [[1, 3], [2, 3], [3, 4], [2, 4]] },
+      { t: 'L', p: [[3, 1], [3, 3], [1, 3]] },
+      { t: 'L', p: [[3, 4], [3, 6], [5, 6]] },
+      { t: 'M', p: [[1, 6], [3, 6], [2, 7]] },
+      { t: 'S', p: [[1, 5], [1, 6], [2, 6]] },
+      { t: 'S', p: [[2, 5], [3, 5], [3, 6]] },
+      { t: 'Q', p: [[2, 4], [3, 4], [3, 5], [2, 5]] },
+      { t: 'P', p: [[1, 5], [2, 5], [3, 6], [2, 6]] },
+    ] },
+    { name: '성', pieces: [
+      { t: 'L', p: [[0, 2], [2, 2], [0, 4]] },
+      { t: 'L', p: [[2, 2], [2, 4], [0, 4]] },
+      { t: 'M', p: [[0, 2], [2, 2], [1, 1]] },
+      { t: 'S', p: [[2, 3], [2, 4], [3, 4]] },
+      { t: 'S', p: [[3, 3], [4, 3], [4, 4]] },
+      { t: 'Q', p: [[2.5, 2], [3.5, 2], [3.5, 3], [2.5, 3]] },
+      { t: 'P', p: [[2, 3], [3, 3], [4, 4], [3, 4]] },
+      { t: 'L', p: [[6, 2], [8, 2], [6, 4]] },
+      { t: 'L', p: [[8, 2], [8, 4], [6, 4]] },
+      { t: 'M', p: [[6, 2], [8, 2], [7, 1]] },
+      { t: 'S', p: [[4, 3], [4, 4], [5, 4]] },
+      { t: 'S', p: [[5, 3], [6, 3], [6, 4]] },
+      { t: 'Q', p: [[4.5, 2], [5.5, 2], [5.5, 3], [4.5, 3]] },
+      { t: 'P', p: [[4, 3], [5, 3], [6, 4], [5, 4]] },
+    ] },
+    { name: '큰 나무', pieces: [
+      { t: 'L', p: [[1, 4], [3, 4], [3, 2]] },
+      { t: 'L', p: [[3, 2], [3, 4], [5, 4]] },
+      { t: 'M', p: [[2, 1], [4, 1], [3, 0]] },
+      { t: 'S', p: [[1, 8], [1, 9], [2, 9]] },
+      { t: 'S', p: [[2, 8], [3, 8], [3, 9]] },
+      { t: 'Q', p: [[2.5, 6], [3.5, 6], [3.5, 7], [2.5, 7]] },
+      { t: 'P', p: [[1, 8], [2, 8], [3, 9], [2, 9]] },
+      { t: 'L', p: [[1, 6], [3, 6], [3, 4]] },
+      { t: 'L', p: [[3, 4], [3, 6], [5, 6]] },
+      { t: 'M', p: [[2, 2], [4, 2], [3, 1]] },
+      { t: 'S', p: [[3, 8], [3, 9], [4, 9]] },
+      { t: 'S', p: [[4, 8], [5, 8], [5, 9]] },
+      { t: 'Q', p: [[2.5, 7], [3.5, 7], [3.5, 8], [2.5, 8]] },
+      { t: 'P', p: [[3, 8], [4, 8], [5, 9], [4, 9]] },
+    ] },
+    { name: '큰 배', pieces: [
+      { t: 'L', p: [[3.5, 0], [3.5, 2], [5.5, 2]] },
+      { t: 'L', p: [[3.5, 2], [5.5, 2], [3.5, 4]] },
+      { t: 'M', p: [[3.5, -2], [3.5, 0], [4.5, -1]] },
+      { t: 'S', p: [[0, 4], [1, 4], [1, 5]] },
+      { t: 'S', p: [[3, 4], [4, 4], [3, 5]] },
+      { t: 'Q', p: [[1, 4], [2, 4], [2, 5], [1, 5]] },
+      { t: 'P', p: [[3, 5], [4, 5], [5, 4], [4, 4]] },
+      { t: 'L', p: [[3.5, 2], [3.5, 4], [1.5, 4]] },
+      { t: 'L', p: [[3.5, 0], [3.5, 2], [1.5, 2]] },
+      { t: 'M', p: [[2.5, 5], [4.5, 5], [3.5, 6]] },
+      { t: 'S', p: [[4, 5], [5, 5], [5, 4]] },
+      { t: 'S', p: [[5, 4], [6, 4], [5, 5]] },
+      { t: 'Q', p: [[2, 4], [3, 4], [3, 5], [2, 5]] },
+      { t: 'P', p: [[5, 5], [6, 5], [7, 4], [6, 4]] },
+    ] },
+    { name: '큰 물고기', pieces: [
+      { t: 'L', p: [[0, 2], [2, 0], [2, 2]] },
+      { t: 'L', p: [[0, 2], [2, 2], [2, 4]] },
+      { t: 'M', p: [[4, 0], [4, 2], [3, 1]] },
+      { t: 'S', p: [[3, 0], [4, 0], [3, 1]] },
+      { t: 'S', p: [[2, 1], [3, 2], [2, 2]] },
+      { t: 'Q', p: [[2, 0], [3, 0], [3, 1], [2, 1]] },
+      { t: 'P', p: [[2, 1], [3, 1], [4, 2], [3, 2]] },
+      { t: 'L', p: [[4, 2], [6, 0], [6, 2]] },
+      { t: 'L', p: [[4, 2], [6, 2], [6, 4]] },
+      { t: 'M', p: [[4, 2], [4, 4], [3, 3]] },
+      { t: 'S', p: [[3, 2], [4, 2], [3, 3]] },
+      { t: 'S', p: [[2, 3], [3, 4], [2, 4]] },
+      { t: 'Q', p: [[2, 2], [3, 2], [3, 3], [2, 3]] },
+      { t: 'P', p: [[2, 3], [3, 3], [4, 4], [3, 4]] },
+    ] },
+    { name: '나비', pieces: [
+      { t: 'L', p: [[3, 3], [3, 1], [1, 1]] },
+      { t: 'L', p: [[3, 3], [3, 5], [1, 5]] },
+      { t: 'M', p: [[2.5, 0], [4.5, 0], [3.5, -1]] },
+      { t: 'S', p: [[4, 1], [3, 1], [3, 2]] },
+      { t: 'S', p: [[4, 2], [4, 3], [3, 3]] },
+      { t: 'Q', p: [[3, 0], [4, 0], [4, 1], [3, 1]] },
+      { t: 'P', p: [[4, 1], [4, 2], [3, 3], [3, 2]] },
+      { t: 'L', p: [[4, 3], [4, 1], [6, 1]] },
+      { t: 'L', p: [[4, 3], [4, 5], [6, 5]] },
+      { t: 'M', p: [[2.5, 6], [4.5, 6], [3.5, 7]] },
+      { t: 'S', p: [[4, 3], [3, 3], [3, 4]] },
+      { t: 'S', p: [[4, 4], [4, 5], [3, 5]] },
+      { t: 'Q', p: [[3, 5], [4, 5], [4, 6], [3, 6]] },
+      { t: 'P', p: [[4, 3], [4, 4], [3, 5], [3, 4]] },
+    ] },
+    { name: '왕관', pieces: [
+      { t: 'L', p: [[0, 3], [0, 1], [2, 3]] },
+      { t: 'L', p: [[2, 3], [4, 3], [4, 1]] },
+      { t: 'M', p: [[1, 2], [3, 2], [2, 3]] },
+      { t: 'S', p: [[2, 3], [2, 4], [3, 4]] },
+      { t: 'S', p: [[3, 3], [4, 3], [4, 4]] },
+      { t: 'Q', p: [[1, 3], [2, 3], [2, 4], [1, 4]] },
+      { t: 'P', p: [[2, 3], [3, 3], [4, 4], [3, 4]] },
+      { t: 'L', p: [[4, 1], [4, 3], [6, 3]] },
+      { t: 'L', p: [[8, 3], [8, 1], [6, 3]] },
+      { t: 'M', p: [[5, 2], [7, 2], [6, 3]] },
+      { t: 'S', p: [[4, 3], [4, 4], [5, 4]] },
+      { t: 'S', p: [[5, 3], [6, 3], [6, 4]] },
+      { t: 'Q', p: [[6, 3], [7, 3], [7, 4], [6, 4]] },
+      { t: 'P', p: [[4, 3], [5, 3], [6, 4], [5, 4]] },
+    ] },
+    { name: '큰 네모', pieces: [
+      { t: 'L', p: [[0, 0], [2, 0], [0, 2]] },
+      { t: 'L', p: [[2, 0], [2, 2], [0, 2]] },
+      { t: 'M', p: [[4, 0], [4, 2], [3, 1]] },
+      { t: 'S', p: [[3, 0], [4, 0], [3, 1]] },
+      { t: 'S', p: [[2, 1], [3, 2], [2, 2]] },
+      { t: 'Q', p: [[2, 0], [3, 0], [3, 1], [2, 1]] },
+      { t: 'P', p: [[2, 1], [3, 1], [4, 2], [3, 2]] },
+      { t: 'L', p: [[2, 2], [4, 2], [2, 4]] },
+      { t: 'L', p: [[4, 2], [4, 4], [2, 4]] },
+      { t: 'M', p: [[0, 4], [0, 2], [1, 3]] },
+      { t: 'S', p: [[1, 4], [0, 4], [1, 3]] },
+      { t: 'S', p: [[2, 3], [1, 2], [2, 2]] },
+      { t: 'Q', p: [[2, 4], [1, 4], [1, 3], [2, 3]] },
+      { t: 'P', p: [[2, 3], [1, 3], [0, 2], [1, 2]] },
+    ] },
+  ];
+
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const svg = $('svg'), stage = $('stage');
+  const boardRect = mk('rect', { class: 'board', rx: 24 }, svg);
+  const trayRect = mk('rect', { class: 'tray', rx: 24 }, svg);
+  const slotLayer = mk('g', {}, svg), placedLayer = mk('g', {}, svg), looseLayer = mk('g', {}, svg);
+
+  // level 0 쉬움(점선, 방향 맞춰 놓임) / 1 보통(점선, 돌려야 함) / 2 어려움(겉모양만, 돌려야 함)
+  let cur = 0, level = 1, sets = 1, turning = true, sound = true, won = false, hintTimer = 0;
+  let voice = false; // 말해 주기는 꺼 둔 채로 시작한다 (기기 목소리가 어색할 수 있어서)
+  let ql = {}; // 문제 놀이마다 고른 단계
+  try {
+    const sv = JSON.parse(localStorage.getItem('chilgyo') || '{}');
+    if ([0, 1, 2].includes(sv.level)) level = sv.level;
+    if (sv.sets === 2) sets = 2;
+    if (sv.voice === true) voice = true;
+    if (sv.ql && typeof sv.ql === 'object') ql = sv.ql;
+  } catch (err) { /* 저장된 값이 없어도 된다 */ }
+  const save = () => { try { localStorage.setItem('chilgyo', JSON.stringify({ level, sets, ql, voice })); } catch (err) { /* 무시 */ } };
+  let pieces = [], slots = [], box = null, unit = 1;
+  let W = 0, H = 0, s = 1, ox = 0, oy = 0;
+  const active = new Map();
+
+  const cen = pts => [pts.reduce((a, v) => a + v[0], 0) / pts.length, pts.reduce((a, v) => a + v[1], 0) / pts.length];
+  const area = pts => Math.abs(pts.reduce((a, v, i) => {
+    const w = pts[(i + 1) % pts.length];
+    return a + v[0] * w[1] - w[0] * v[1];
+  }, 0)) / 2;
+  const turned = (rel, deg) => {
+    const a = deg * Math.PI / 180, c = Math.cos(a), n = Math.sin(a);
+    return rel.map(v => [v[0] * c - v[1] * n, v[0] * n + v[1] * c]);
+  };
+  const bounds = pts => {
+    const xs = pts.map(v => v[0]), ys = pts.map(v => v[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    return { x0, y0, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+  };
+  const draw = p => p.g.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${p.rot})`);
+
+  function tween(p, to, ms, done) {
+    if (p.anim) cancelAnimationFrame(p.anim);
+    const from = { x: p.x, y: p.y, rot: p.rot }, t0 = performance.now();
+    const step = now => {
+      const k = reduce ? 1 : Math.min(1, (now - t0) / ms), e = 1 - (1 - k) * (1 - k);
+      for (const key in to) p[key] = from[key] + (to[key] - from[key]) * e;
+      draw(p);
+      if (k < 1) p.anim = requestAnimationFrame(step);
+      else { p.anim = 0; if (done) done(); }
+    };
+    p.anim = requestAnimationFrame(step);
+  }
+
+  // ---------- 소리 ----------
+  let ac = null;
+  function wake() {
+    if (!sound) return;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+    } catch (err) { ac = null; }
+  }
+  function tone(freq, at, len) {
+    if (!sound || !ac) return;
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at;
+    o.type = 'triangle'; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + len + 0.02);
+  }
+  const pop = () => { tone(660, 0, 0.12); tone(990, 0.06, 0.14); };
+  const fanfare = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.13, 0.3));
+
+  // ---------- 말해 주기 (글을 몰라도 놀 수 있게) ----------
+  const canTalk = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  let koVoice = null;
+  const findVoice = () => {
+    try {
+      const vs = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
+      // 사람 목소리에 가까운 것부터 고른다
+      koVoice = vs.find(v => /natural|neural|online/i.test(v.name)) || vs.find(v => /google|yuna|sora|sun-?hi/i.test(v.name)) || vs[0] || null;
+    } catch (err) { koVoice = null; }
+  };
+  if (canTalk) {
+    findVoice();
+    if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', findVoice);
+  }
+  // queue가 참이면 하던 말을 끊지 않고 이어서 말한다
+  function say(text, queue) {
+    if (!sound || !voice || !canTalk || !text) return;
+    try {
+      if (!queue) speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ko-KR'; u.rate = 0.95; u.pitch = 1;
+      if (koVoice) u.voice = koVoice;
+      speechSynthesis.speak(u);
+    } catch (err) { /* 말이 안 나와도 놀이는 된다 */ }
+  }
+
+  // ---------- 판 만들기 ----------
+  function load(i) {
+    cur = i; won = false; $('win').hidden = true; active.clear();
+    turning = level > 0;
+    clearTimeout(hintTimer);
+    slotLayer.classList.toggle('plain', level === 2);
+    $('hint-btn').hidden = level !== 2;
+    slotLayer.replaceChildren(); placedLayer.replaceChildren(); looseLayer.replaceChildren();
+    const P = PUZZLES[i].pieces;
+    box = bounds(P.flatMap(q => q.p));
+    unit = Math.sqrt(P.reduce((a, q) => a + area(q.p), 0) / (P.length / 7)) / 4;
+    slots = P.map(q => {
+      const c = cen(q.p);
+      return { t: q.t, p: q.p, c, rel: q.p.map(v => [v[0] - c[0], v[1] - c[1]]), filled: false, el: mk('polygon', { class: 'slot' }, slotLayer) };
+    });
+    pieces = slots.map((sl, k) => {
+      const g = mk('g', { class: 'piece' }, looseLayer);
+      const r = turning ? 90 * (1 + Math.floor(Math.random() * 3)) : 0;
+      const p = { k, t: sl.t, rel: sl.rel, r, rot: r, x: 0, y: 0, placed: false, slot: -1, g, poly: mk('polygon', { class: 'c' + (k % 7) }, g), anim: 0 };
+      g.addEventListener('pointerdown', e => down(e, p));
+      return p;
+    });
+    [...$('picker').children].forEach(b => {
+      b.setAttribute('aria-pressed', String(+b.dataset.i === i));
+      if (+b.dataset.i === i) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    $('hint').textContent = [
+      '조각을 끌어서 그림에 맞춰 봐.',
+      '조각을 톡 누르면 돌아가. 돌려서 그림에 맞춰 봐.',
+      '어디에 놓을지 스스로 찾아봐. 톡 누르면 돌아가.',
+    ][level];
+    layout();
+  }
+
+  // 조각 놓는 곳에 겹치지 않게 줄 맞춰 놓기. 안 들어가면 null.
+  function pack(loose, sc) {
+    const pad = 14, m = 12, maxW = tray.w - pad * 2, maxH = tray.h - pad * 2;
+    const items = loose.map(p => {
+      const b = bounds(turned(p.rel, p.r));
+      return { p, b, w: b.w * sc + m, h: b.h * sc + m };
+    }).sort((a, b) => b.h - a.h);
+    const rows = [];
+    let row = { items: [], w: 0, h: 0 };
+    for (const it of items) {
+      if (it.w > maxW) return null;
+      if (row.items.length && row.w + it.w > maxW) { rows.push(row); row = { items: [], w: 0, h: 0 }; }
+      row.items.push(it); row.w += it.w; row.h = Math.max(row.h, it.h);
+    }
+    if (row.items.length) rows.push(row);
+    const total = rows.reduce((a, r) => a + r.h, 0);
+    if (total > maxH) return null;
+    const out = [], gy = (maxH - total) / (rows.length + 1);
+    let y = tray.y + pad + gy;
+    for (const r of rows) {
+      const gx = (maxW - r.w) / (r.items.length + 1);
+      let x = tray.x + pad + gx;
+      for (const it of r.items) {
+        out.push({ p: it.p, x: x + it.w / 2 - it.b.cx * sc, y: y + r.h / 2 - it.b.cy * sc });
+        x += it.w + gx;
+      }
+      y += r.h + gy;
+    }
+    return out;
+  }
+
+  let board = null, tray = null;
+  function layout() {
+    W = stage.clientWidth; H = stage.clientHeight;
+    if (!W || !H || !box) return;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const wide = W > H, gap = 12;
+    const share = pieces.length > 7 ? 0.5 : 0.56;
+    board = wide ? { x: 0, y: 0, w: Math.round(W * share), h: H } : { x: 0, y: 0, w: W, h: Math.round(H * (share - 0.04)) };
+    tray = wide ? { x: board.w + gap, y: 0, w: W - board.w - gap, h: H } : { x: 0, y: board.h + gap, w: W, h: H - board.h - gap };
+    for (const [el, r, inset] of [[boardRect, board, 0], [trayRect, tray, 1.5]]) {
+      el.setAttribute('x', r.x + inset); el.setAttribute('y', r.y + inset);
+      el.setAttribute('width', Math.max(0, r.w - inset * 2)); el.setAttribute('height', Math.max(0, r.h - inset * 2));
+    }
+    const pad = Math.min(board.w, board.h) * 0.08 + 8;
+    let sc = Math.min((board.w - pad * 2) / box.w, (board.h - pad * 2) / box.h), spots = null;
+    const loose = pieces.filter(p => !p.placed);
+    for (let n = 0; n < 60 && !(spots = pack(loose, sc)); n++) sc *= 0.96;
+    s = sc;
+    ox = board.x + (board.w - box.w * s) / 2 - box.x0 * s;
+    oy = board.y + (board.h - box.h * s) / 2 - box.y0 * s;
+    slots.forEach(sl => sl.el.setAttribute('points', sl.p.map(v => (ox + v[0] * s) + ',' + (oy + v[1] * s)).join(' ')));
+    pieces.forEach(p => {
+      p.poly.setAttribute('points', p.rel.map(v => (v[0] * s) + ',' + (v[1] * s)).join(' '));
+      if (p.placed) { const c = slots[p.slot].c; p.x = ox + c[0] * s; p.y = oy + c[1] * s; }
+    });
+    if (spots) spots.forEach(o => { o.p.x = o.x; o.p.y = o.y; });
+    pieces.forEach(draw);
+  }
+
+  // ---------- 끌기 ----------
+  const pos = e => {
+    const r = svg.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
+  };
+  function down(e, p) {
+    if (p.placed || won || active.has(e.pointerId)) return;
+    e.preventDefault(); wake();
+    if (p.anim) { cancelAnimationFrame(p.anim); p.anim = 0; }
+    const pt = pos(e);
+    p.drag = { dx: pt.x - p.x, dy: pt.y - p.y, sx: pt.x, sy: pt.y, moved: false };
+    active.set(e.pointerId, p);
+    looseLayer.appendChild(p.g);
+    p.g.classList.add('drag');
+    try { svg.setPointerCapture(e.pointerId); } catch (err) { /* 잡지 못해도 놀이는 된다 */ }
+  }
+  svg.addEventListener('pointermove', e => {
+    const p = active.get(e.pointerId);
+    if (!p) return;
+    const pt = pos(e), d = p.drag;
+    if (Math.hypot(pt.x - d.sx, pt.y - d.sy) > 8) d.moved = true;
+    p.x = Math.max(0, Math.min(W, pt.x - d.dx));
+    p.y = Math.max(0, Math.min(H, pt.y - d.dy));
+    draw(p);
+  });
+  const up = e => {
+    const p = active.get(e.pointerId);
+    if (!p) return;
+    active.delete(e.pointerId);
+    p.g.classList.remove('drag');
+    if (!p.drag.moved && turning) {
+      p.r += 90;
+      tween(p, { rot: p.r }, 160, () => { p.r %= 360; p.rot = p.r; draw(p); snap(p); });
+    } else snap(p);
+  };
+  svg.addEventListener('pointerup', up);
+  svg.addEventListener('pointercancel', up);
+
+  function snap(p) {
+    if (p.placed) return;
+    const rp = turned(p.rel, p.r), tol = unit * s * [0.9, 0.6, 0.45][level], eps = unit * 0.12;
+    let best = -1, bestD = Infinity;
+    slots.forEach((sl, j) => {
+      if (sl.filled || sl.t !== p.t) return;
+      const d = Math.hypot(p.x - (ox + sl.c[0] * s), p.y - (oy + sl.c[1] * s));
+      if (d > tol || d >= bestD) return;
+      if (rp.every(v => sl.rel.some(w => Math.hypot(v[0] - w[0], v[1] - w[1]) < eps))) { best = j; bestD = d; }
+    });
+    if (best < 0) return;
+    const sl = slots[best];
+    sl.filled = true; p.placed = true; p.slot = best;
+    // 같은 모양 조각이 서로의 자리에 들어가도 되도록, 자리의 모양으로 바꿔 끼운다
+    p.rel = sl.rel; p.r = 0; p.rot = 0;
+    p.poly.setAttribute('points', p.rel.map(v => (v[0] * s) + ',' + (v[1] * s)).join(' '));
+    placedLayer.appendChild(p.g);
+    p.g.classList.add('placed');
+    tween(p, { x: ox + sl.c[0] * s, y: oy + sl.c[1] * s }, 120);
+    pop();
+    if (pieces.every(q => q.placed)) {
+      won = true;
+      setTimeout(() => {
+        if (!won) return;
+        $('win').hidden = false; fanfare(); confetti($('fx'), () => won);
+        say('우와, 다 맞췄어! 다음 그림도 해 볼까?');
+      }, 380);
+    }
+  }
+
+  // ---------- 다 맞췄을 때 ----------
+  function confetti(c, alive) {
+    if (reduce) return;
+    const ctx = c.getContext('2d'), W = c.clientWidth, H = c.clientHeight;
+    c.width = W; c.height = H;
+    const css = getComputedStyle(document.documentElement);
+    const cols = [0, 1, 2, 3, 4, 5, 6].map(k => css.getPropertyValue('--p' + k).trim());
+    const parts = Array.from({ length: 80 }, (_, i) => ({
+      x: Math.random() * W, y: -20 - Math.random() * H * 0.5,
+      vx: (Math.random() - 0.5) * 2, vy: 2.5 + Math.random() * 3,
+      a: Math.random() * 6.28, va: (Math.random() - 0.5) * 0.3,
+      z: 8 + Math.random() * 10, c: cols[i % 7],
+    }));
+    const t0 = performance.now();
+    const frame = now => {
+      ctx.clearRect(0, 0, c.width, c.height);
+      if (!alive() || now - t0 > 3500) return;
+      for (const q of parts) {
+        q.x += q.vx; q.y += q.vy; q.a += q.va;
+        ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.a);
+        ctx.fillStyle = q.c; ctx.beginPath();
+        ctx.moveTo(-q.z, q.z / 2); ctx.lineTo(q.z, q.z / 2); ctx.lineTo(0, -q.z / 2);
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- 버튼 ----------
+  const inSet = i => PUZZLES[i].pieces.length === sets * 7;
+  const mine = () => PUZZLES.map((z, i) => i).filter(inSet);
+  function buildPicker() {
+    $('picker').replaceChildren();
+    mine().forEach(i => {
+      const pz = PUZZLES[i], b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.id = 'pick-' + i; b.dataset.i = i;
+      const bb = bounds(pz.pieces.flatMap(q => q.p)), side = Math.max(bb.w, bb.h);
+      const icon = mk('svg', { viewBox: `${bb.cx - side / 2} ${bb.cy - side / 2} ${side} ${side}`, 'aria-hidden': 'true' }, b);
+      pz.pieces.forEach(q => mk('polygon', { points: q.p.map(v => v.join(',')).join(' ') }, icon));
+      b.appendChild(document.createTextNode(pz.name));
+      b.addEventListener('click', () => { wake(); load(i); });
+      $('picker').appendChild(b);
+    });
+  }
+  const mark = () => {
+    [1, 2].forEach(n => $('sets-' + n).setAttribute('aria-pressed', String(n === sets)));
+    [0, 1, 2].forEach(n => $('level-' + n).setAttribute('aria-pressed', String(n === level)));
+  };
+  [1, 2].forEach(n => $('sets-' + n).addEventListener('click', () => {
+    if (sets === n) return;
+    sets = n; save(); mark(); buildPicker(); load(mine()[0]);
+  }));
+  [0, 1, 2].forEach(n => $('level-' + n).addEventListener('click', () => {
+    level = n; save(); mark(); load(cur);
+  }));
+  $('hint-btn').addEventListener('click', () => {
+    slotLayer.classList.remove('plain');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => slotLayer.classList.toggle('plain', level === 2), 3000);
+  });
+  $('sound-home').addEventListener('click', () => {
+    sound = !sound;
+    $('sound-home').setAttribute('aria-pressed', String(sound));
+    if (sound) { wake(); say('소리를 켰어'); }
+    else if (canTalk) speechSynthesis.cancel();
+  });
+  $('listen-t').addEventListener('click', () => { wake(); say($('hint').textContent); });
+  const applyVoice = () => {
+    $('voice-home').setAttribute('aria-pressed', String(voice));
+    $('listen-t').hidden = !voice;
+    $('listen-q').hidden = !voice;
+  };
+  $('voice-home').addEventListener('click', () => {
+    voice = !voice; save(); applyVoice();
+    if (voice) { wake(); say('안녕! 나는 꼼지야.'); }
+    else if (canTalk) speechSynthesis.cancel();
+  });
+  applyVoice();
+  $('reset').addEventListener('click', () => load(cur));
+  $('again').addEventListener('click', () => load(cur));
+  $('next').addEventListener('click', () => {
+    const ids = mine();
+    load(ids[(ids.indexOf(cur) + 1) % ids.length]);
+  });
+
+  // ================= 문제 놀이 (한 판에 다섯 문제) =================
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = arr => arr[rnd(0, arr.length - 1)];
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) { const j = rnd(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    return arr;
+  };
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+  const buzz = () => tone(180, 0, 0.18);
+  const STAR = Array.from({ length: 10 }, (_, i) => {
+    const r = i % 2 ? 7.5 : 18, a = Math.PI * i / 5 - Math.PI / 2;
+    return (20 + r * Math.cos(a)).toFixed(1) + ',' + (20 + r * Math.sin(a)).toFixed(1);
+  }).join(' ');
+  function shape(kind, k) {
+    const s = mk('svg', { viewBox: '0 0 40 40', 'aria-hidden': 'true' }), cls = 'c' + k;
+    if (kind === 'circle') mk('circle', { cx: 20, cy: 20, r: 16, class: cls }, s);
+    else if (kind === 'square') mk('rect', { x: 5, y: 5, width: 30, height: 30, rx: 4, class: cls }, s);
+    else mk('polygon', { points: { triangle: '20,4 37,35 3,35', diamond: '20,2 36,20 20,38 4,20', star: STAR }[kind], class: cls }, s);
+    return s;
+  }
+  // 정답 하나에 헷갈리는 수를 섞어 보기 네 개를 만든다
+  function options(ans, cands) {
+    const set = [ans];
+    for (const c of shuffle(cands.slice())) if (set.length < 4 && c >= 0 && !set.includes(c)) set.push(c);
+    for (let d = 1; set.length < 4; d++) {
+      if (!set.includes(ans + d)) set.push(ans + d);
+      else if (ans - d >= 0 && !set.includes(ans - d)) set.push(ans - d);
+    }
+    return shuffle(set).map(v => ({ value: v, text: String(v) }));
+  }
+
+  const GAMES = {
+    bonds: {
+      title: '모아모아',
+      tips: ['구슬을 세어 보면 알 수 있어.', '구슬을 세어 보면 알 수 있어.', '구슬 없이 머리로 생각해 봐.'],
+      next(lv, box) {
+        const whole = lv === 0 ? rnd(2, 5) : lv === 1 ? rnd(4, 10) : rnd(11, 20);
+        const a = rnd(1, whole - 1), b = whole - a, vals = { whole, a, b };
+        const hide = pick(['whole', 'a', 'b']), ans = vals[hide];
+        box.appendChild(el('p', 'qtext', '빈 곳에 들어갈 수는 뭘까?'));
+        const s = mk('svg', { viewBox: '0 0 300 210', class: 'bond' }, box);
+        mk('line', { x1: 150, y1: 55, x2: 80, y2: 155 }, s);
+        mk('line', { x1: 150, y1: 55, x2: 220, y2: 155 }, s);
+        const texts = {};
+        [['whole', 150, 55], ['a', 80, 155], ['b', 220, 155]].forEach(([key, x, y]) => {
+          const g = mk('g', { class: key === hide ? 'node ask' : 'node' }, s);
+          mk('circle', { cx: x, cy: y, r: 44 }, g);
+          texts[key] = mk('text', { x, y }, g);
+          texts[key].textContent = key === hide ? '?' : vals[key];
+        });
+        if (lv < 2) {
+          const beads = el('div', 'beads');
+          for (let i = 0; i < whole; i++) beads.appendChild(el('span', 'bead ' + (i < a ? 'b1' : 'b4')));
+          box.appendChild(beads);
+        }
+        return {
+          answer: ans,
+          choices: options(ans, [ans - 1, ans + 1, ans - 2, ans + 2, whole, a, b]),
+          reveal: () => { texts[hide].textContent = ans; },
+          say: hide === 'whole' ? `${a}, 그리고 ${b}. 둘을 모으면 몇일까?` : `모두 ${whole}. 한쪽은 ${hide === 'a' ? b : a}. 다른 쪽은 몇일까?`,
+        };
+      },
+    },
+    bundles: {
+      title: '차곡차곡',
+      tips: ['10개씩 묶음과 낱개를 따로 세어 봐.', '10개씩 묶음과 낱개를 따로 세어 봐.', '더하기 10은 묶음 하나, 더하기 1은 구슬 하나야.'],
+      next(lv, box) {
+        const draw = (wrap, t, o) => {
+          const tens = el('div', 'tens'), ones = el('div', 'ones');
+          for (let i = 0; i < t; i++) {
+            const bar = el('div', 'bundle');
+            for (let j = 0; j < 10; j++) bar.appendChild(el('i'));
+            tens.appendChild(bar);
+          }
+          for (let i = 0; i < o; i++) ones.appendChild(el('i'));
+          wrap.replaceChildren(tens, ones);
+        };
+        const row = el('div', 'count-row');
+        if (lv < 2) {
+          const n = lv === 0 ? rnd(11, 39) : rnd(20, 99), t = Math.floor(n / 10), o = n % 10;
+          box.appendChild(el('p', 'qtext', '구슬은 모두 몇 개일까?'));
+          box.appendChild(row); draw(row, t, o);
+          if (lv === 0) box.appendChild(el('p', 'qsub', `10개씩 ${t}묶음, 낱개 ${o}개`));
+          return {
+            answer: n,
+            choices: options(n, [o * 10 + t, n + 10, n - 10, n + 1, n - 1, t + o]),
+            say: lv === 0 ? `10개씩 ${t}묶음, 그리고 낱개 ${o}개. 구슬은 모두 몇 개일까?` : '',
+          };
+        }
+        const n = rnd(21, 99);
+        let t = 0, o = 0;
+        box.appendChild(el('p', 'qtext', `구슬 ${n}개를 만들어 봐`));
+        box.appendChild(row);
+        const ctl = el('div', 'steppers');
+        box.appendChild(ctl);
+        [['−10', () => { t = Math.max(0, t - 1); }], ['+10', () => { t = Math.min(9, t + 1); }],
+          ['−1', () => { o = Math.max(0, o - 1); }], ['+1', () => { o = Math.min(9, o + 1); }]].forEach(([label, fn], i) => {
+          const b = el('button', 'chip big', label);
+          b.type = 'button'; b.id = 'step-' + i;
+          b.addEventListener('click', () => { wake(); fn(); draw(row, t, o); });
+          ctl.appendChild(b);
+        });
+        draw(row, 0, 0);
+        return { check: () => t * 10 + o === n };
+      },
+    },
+    clock: {
+      title: '째깍째깍',
+      tips: ['빨간 동그라미를 잡고 숫자까지 끌어 봐.', '파란 동그라미를 잡고 돌려 봐. 한 바퀴 돌면 짧은바늘이 한 칸 가.', '파란 동그라미를 잡고 돌려 봐. 숫자 한 칸이 5분이야.'],
+      next(lv, box) {
+        const hourOnly = lv === 0, step = [60, 30, 5][lv];
+        const h = rnd(1, 12), m = hourOnly ? 0 : rnd(0, 60 / step - 1) * step, goal = (h % 12) * 60 + m;
+        let tc = goal === 0 ? 180 : 0, last = null; // tc: 12시부터 흐른 분
+        box.appendChild(el('p', 'qtext', '시계를 맞춰 봐'));
+        box.appendChild(el('p', 'bigtime', h + '시' + (m ? ' ' + m + '분' : '')));
+        const s = mk('svg', { viewBox: '0 0 300 300', class: 'clock' }, box);
+        mk('circle', { cx: 150, cy: 150, r: 140, class: 'face' }, s);
+        for (let i = 0; i < 60; i++) {
+          const a = i * 6 * Math.PI / 180, r1 = i % 5 ? 132 : 125;
+          mk('line', { x1: 150 + r1 * Math.sin(a), y1: 150 - r1 * Math.cos(a), x2: 150 + 138 * Math.sin(a), y2: 150 - 138 * Math.cos(a), class: 'tick' }, s);
+        }
+        for (let i = 1; i <= 12; i++) {
+          const a = i * 30 * Math.PI / 180;
+          mk('text', { x: 150 + 90 * Math.sin(a), y: 150 - 90 * Math.cos(a) }, s).textContent = i;
+        }
+        const hh = mk('line', { x1: 150, y1: 150, x2: 150, y2: 98, class: 'hh' }, s);
+        const mh = mk('line', { x1: 150, y1: 150, x2: 150, y2: 32, class: 'mh' }, s);
+        const knob = mk('circle', { cx: 150, cy: hourOnly ? 98 : 32, r: 13, class: hourOnly ? 'knob k0' : 'knob k1' }, s); // 잡는 손잡이
+        mk('circle', { cx: 150, cy: 150, r: 8, class: 'pin' }, s);
+        const norm = v => ((v % 720) + 720) % 720;
+        const shown = () => norm(Math.round(tc / step) * step);
+        const paint = () => {
+          const T = norm(tc), ha = T / 2, ma = hourOnly ? 0 : (T % 60) * 6;
+          hh.setAttribute('transform', `rotate(${ha} 150 150)`);
+          mh.setAttribute('transform', `rotate(${ma} 150 150)`);
+          knob.setAttribute('transform', `rotate(${hourOnly ? ha : ma} 150 150)`);
+        };
+        // 손가락이 있는 쪽으로 바늘이 바로 따라온다. 놓으면 가까운 눈금에 붙는다.
+        const follow = e => {
+          const r = s.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+          if (Math.hypot(dx, dy) < r.width * 0.08) return; // 한가운데는 방향이 흔들려서 무시
+          const a = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+          const span = hourOnly ? 720 : 60, want = hourOnly ? a * 2 : a / 6;
+          let d = want - (((tc % span) + span) % span);
+          if (d > span / 2) d -= span;
+          if (d < -span / 2) d += span;
+          tc += d; // 긴바늘이 12를 지나가면 시간도 같이 넘어간다
+          paint();
+        };
+        s.addEventListener('pointerdown', e => {
+          e.preventDefault(); wake(); last = true;
+          try { s.setPointerCapture(e.pointerId); } catch (err) { /* 잡지 못해도 된다 */ }
+          follow(e);
+        });
+        s.addEventListener('pointermove', e => { if (last) follow(e); });
+        const end = () => { if (last) { last = null; tc = shown(); paint(); } };
+        s.addEventListener('pointerup', end);
+        s.addEventListener('pointercancel', end);
+        paint();
+        return { check: () => shown() === goal, say: (m ? `${h}시 ${m}분으로` : `${h}시로`) + ' 시계를 맞춰 봐.' };
+      },
+    },
+    calendar: {
+      title: '오늘은 무슨 날?',
+      tips: ['옆 칸으로 가면 하나씩 커져.', '바로 아랫줄은 일곱 큰 수야.', '보이는 숫자에서 한 칸씩 세어 봐. 아랫줄은 일곱 큰 수야.'],
+      // 글 없이 푸는 달력: 물음표 칸에 들어갈 날짜를 고른다.
+      // 규칙은 두 가지뿐이다. 옆 칸은 +1, 아랫줄은 +7.
+      next(lv, box) {
+        const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+        const year = new Date().getFullYear(), month = rnd(1, 12);
+        const first = new Date(year, month - 1, 1).getDay(), days = new Date(year, month, 0).getDate();
+        const row = d => Math.floor((first + d - 1) / 7);
+        const ans = rnd(lv === 0 ? 2 : 1, lv === 0 ? days - 1 : days);
+        let shown;
+        if (lv === 0) shown = d => true;                      // 옆 칸을 보고 안다
+        else if (lv === 1) shown = d => row(d) !== row(ans);  // 그 주가 통째로 비어서 위아래 줄을 봐야 한다
+        else {
+          const keep = new Set(shuffle(Array.from({ length: days }, (_, i) => i + 1).filter(d => d !== ans)).slice(0, 5));
+          shown = d => keep.has(d);                           // 몇 개만 보여서 칸을 세어야 한다
+        }
+        box.appendChild(el('p', 'qsub', month + '월'));
+        const cal = el('div', 'cal');
+        box.appendChild(cal);
+        DOW.forEach((d, i) => cal.appendChild(el('div', 'dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : ''), d)));
+        for (let i = 0; i < first; i++) cal.appendChild(el('div'));
+        let ask = null;
+        for (let d = 1; d <= days; d++) {
+          const c = d === ans ? el('div', 'day ask', '?') : shown(d) ? el('div', 'day', String(d)) : el('div', 'day hide');
+          if (d === ans) ask = c;
+          cal.appendChild(c);
+        }
+        const near = [ans - 1, ans + 1, ans - 7, ans + 7, ans - 6, ans + 6, ans + 8, ans - 8].filter(v => v >= 1 && v <= 31);
+        return {
+          answer: ans,
+          choices: options(ans, near),
+          reveal: () => { ask.textContent = ans; ask.classList.add('yes'); },
+          say: '물음표에 들어갈 날짜는 뭘까?',
+        };
+      },
+    },
+    color: {
+      title: '알록달록',
+      rounds: 1,
+      tips: ['색을 고르고 그림을 콕콕 눌러 봐. 하얀 곳이 없게 다 칠해 줘.', '그림에 적힌 숫자와 같은 숫자의 색을 골라 봐.', '두 수를 더해 봐. 그 수가 적힌 색으로 칠하면 돼.'],
+      // 색칠 놀이: 칠교 그림을 칠한다. ★ 마음대로, ★★ 숫자와 같은 색, ★★★ 더한 수와 같은 색
+      next(lv, box) {
+        const pz = pick(PUZZLES.filter(z => z.pieces.length === 7));
+        const bb = bounds(pz.pieces.flatMap(q => q.p)), u = Math.sqrt(pz.pieces.reduce((a, q) => a + area(q.p), 0)) / 4, pad = u * 0.15;
+        const s = mk('svg', { viewBox: `${bb.x0 - pad} ${bb.y0 - pad} ${bb.w + pad * 2} ${bb.h + pad * 2}`, class: 'paint' }, box);
+        const base = lv === 2 ? 2 : 1, count = lv === 0 ? 6 : lv === 1 ? 4 : 5; // 색 단추에 적는 수: base부터
+        const cols = shuffle([0, 1, 2, 3, 4, 5, 6]).slice(0, count);
+        let sel = 0, left = pz.pieces.length;
+        const bar = el('div', 'swatches');
+        const sws = cols.map((k, i) => {
+          const b = el('button', 'sw k' + k, lv === 0 ? null : String(base + i));
+          b.type = 'button'; b.id = 'sw-' + i;
+          b.setAttribute('aria-label', '색 ' + (i + 1));
+          b.setAttribute('aria-pressed', String(i === 0));
+          b.addEventListener('click', () => { wake(); sel = i; sws.forEach((x, j) => x.setAttribute('aria-pressed', String(j === i))); });
+          bar.appendChild(b);
+          return b;
+        });
+        pz.pieces.forEach((q, n) => {
+          const want = lv === 0 ? -1 : (n < count ? n : rnd(0, count - 1)); // 앞쪽 조각으로 모든 색을 한 번씩 쓴다
+          const poly = mk('polygon', { points: q.p.map(v => v.join(',')).join(' '), class: 'blank' }, s);
+          let label = null, done = false;
+          if (lv > 0) {
+            const c = cen(q.p), v = base + want, a = rnd(1, v - 1);
+            label = mk('text', { x: c[0], y: c[1], 'font-size': u * (lv === 2 ? 0.3 : 0.48) }, s);
+            label.textContent = lv === 2 ? `${a}+${v - a}` : v;
+          }
+          poly.addEventListener('click', () => {
+            if (quiz.busy) return;
+            wake();
+            if (lv > 0 && done) return;
+            if (lv > 0 && sel !== want) { buzz(); say(pick(RETRY)); quiz.miss++; if (quiz.miss >= 2) sws[want].classList.add('nudge'); return; }
+            if (!done) left--;
+            done = true; quiz.miss = 0;
+            sws.forEach(x => x.classList.remove('nudge'));
+            poly.setAttribute('class', 'c' + cols[sel]);
+            if (label) label.remove();
+            pop();
+            if (lv > 0 && left === 0) right();
+          });
+        });
+        box.appendChild(bar);
+        const line = ['좋아하는 색으로 마음껏 칠해 봐.', '숫자와 같은 색으로 칠해 봐.', '더한 수와 같은 색으로 칠해 봐.'][lv];
+        return lv === 0 ? { check: () => left === 0, say: line } : { custom: true, say: line };
+      },
+    },
+    pattern: {
+      title: '알쏭달쏭',
+      tips: ['모양이 어떤 순서로 되풀이되는지 봐.', '가운데 빈칸도 있어. 앞뒤를 잘 봐.', '수가 얼마씩 커지거나 작아지는지 찾아봐.'],
+      next(lv, box) {
+        box.appendChild(el('p', 'qtext', '빈칸에 뭐가 올까?'));
+        const seq = el('div', 'seq');
+        box.appendChild(seq);
+        if (lv === 2) {
+          const d = pick([1, 2, 3, 5, 10, -1, -2]), start = d > 0 ? rnd(1, 20) : rnd(12, 30);
+          const terms = Array.from({ length: 5 }, (_, i) => start + d * i), hole = rnd(2, 4), ans = terms[hole];
+          terms.forEach((v, i) => seq.appendChild(el('div', i === hole ? 'cell blank' : 'cell num', i === hole ? '?' : String(v))));
+          return { answer: ans, choices: options(ans, [ans + 1, ans - 1, ans + d, ans - d, ans + 2]) };
+        }
+        const unit = pick(lv === 0 ? ['AB', 'AAB', 'ABB', 'ABC'] : ['ABC', 'AABB', 'ABCB', 'ABAC', 'AABC']);
+        const kinds = shuffle(['circle', 'triangle', 'square', 'diamond', 'star']), cols = shuffle([0, 1, 2, 3, 4, 5, 6]);
+        const draw = c => shape(kinds[c.charCodeAt(0) - 65], cols[c.charCodeAt(0) - 65]);
+        const len = Math.min(10, unit.length * 2 + rnd(1, unit.length));
+        const hole = lv === 0 ? len - 1 : rnd(unit.length, len - 1);
+        for (let i = 0; i < len; i++) {
+          const cell = el('div', i === hole ? 'cell blank' : 'cell', i === hole ? '?' : null);
+          if (i !== hole) cell.appendChild(draw(unit[i % unit.length]));
+          seq.appendChild(cell);
+        }
+        const letters = [...new Set(unit)];
+        letters.push(String.fromCharCode(65 + letters.length)); // 규칙에 없는 모양 하나
+        return { answer: unit[hole % unit.length], choices: shuffle(letters).map(c => ({ value: c, node: () => draw(c) })) };
+      },
+    },
+  };
+
+  const quiz = { id: '', level: 1, n: 0, goal: 5, cur: null, busy: false, won: false, miss: 0, line: '' };
+  const PRAISE = ['딩동댕!', '우와, 맞았어!', '잘했어!', '바로 그거야!'];
+  const RETRY = ['다시 해 볼까?', '괜찮아, 한 번 더!', '음, 다른 건 어떨까?'];
+  const HOST = { bonds: 'dong', bundles: 'dong', clock: 'dong', calendar: 'dong', pattern: 'semo', color: 'kkom' };
+  const progress = () => $('qprog').replaceChildren(...Array.from({ length: quiz.goal }, (_, i) => el('span', i < quiz.n ? 'on' : '')));
+  function ask(queue) {
+    quiz.busy = false; quiz.won = false; quiz.miss = 0; $('qwin').hidden = true;
+    const box = $('qstage'), row = $('qchoices'), g = GAMES[quiz.id];
+    box.replaceChildren(); row.replaceChildren(); progress();
+    [0, 1, 2].forEach(n => $('ql-' + n).setAttribute('aria-pressed', String(n === quiz.level)));
+    $('qhint').textContent = g.tips[quiz.level];
+    const cur = quiz.cur = g.next(quiz.level, box);
+    const shownText = box.querySelector('.qtext');
+    quiz.line = cur.say || (shownText ? shownText.textContent : '');
+    if (cur.check && quiz.n === 0) quiz.line += ' 다 되면 아래 단추를 눌러 봐.';
+    say(quiz.line, queue);
+    if (cur.choices) {
+      cur.choices.forEach((c, i) => {
+        const b = el('button', 'choice', c.text);
+        b.type = 'button'; b.id = 'choice-' + i;
+        if (c.node) b.appendChild(c.node());
+        b.addEventListener('click', () => {
+          if (quiz.busy) return;
+          wake();
+          if (c.value === cur.answer) { b.classList.add('yes'); right(); }
+          else miss(b);
+        });
+        if (c.value === cur.answer) b.dataset.ok = '1';
+        row.appendChild(b);
+      });
+    } else if (cur.check) {
+      const b = el('button', 'choice');
+      b.appendChild(ico('check')); b.setAttribute('aria-label', '확인');
+      b.type = 'button'; b.id = 'check';
+      b.addEventListener('click', () => {
+        if (quiz.busy) return;
+        wake();
+        if (cur.check()) { b.classList.add('yes'); right(); }
+        else { miss(null); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+      });
+      row.appendChild(b);
+    }
+  }
+  function right() {
+    quiz.busy = true; pop();
+    if (quiz.cur.reveal) quiz.cur.reveal();
+    quiz.n++; progress();
+    if (quiz.n >= quiz.goal) {
+      quiz.won = true;
+      setTimeout(() => {
+        if (!quiz.won) return;
+        $('qwin').hidden = false; fanfare(); confetti($('qfx'), () => quiz.won);
+        say('참 잘했어! 정말 멋지다. 한 번 더 할까?');
+      }, 600);
+    } else {
+      say(pick(PRAISE));
+      setTimeout(() => { if (quiz.busy) ask(true); }, 900);
+    }
+  }
+  // 틀렸을 때: 처음에는 다시 해 보라고 하고, 두 번째부터는 엄마처럼 살짝 알려 준다
+  function miss(btn) {
+    if (btn) { btn.classList.add('no'); btn.disabled = true; }
+    buzz(); quiz.miss++;
+    if (quiz.miss < 2) { say(pick(RETRY)); return; }
+    const ok = $('view-quiz').querySelector('[data-ok]');
+    if (ok) { ok.classList.add('nudge'); say('여기를 한번 볼까?'); }
+    else say(GAMES[quiz.id].tips[quiz.level]);
+  }
+  function openQuiz(id) {
+    quiz.id = id; quiz.n = 0; quiz.goal = GAMES[id].rounds || 5;
+    quiz.level = [0, 1, 2].includes(ql[id]) ? ql[id] : 1;
+    $('qtitle').textContent = GAMES[id].title;
+    $('host-q').replaceChildren(face(HOST[id]));
+    show('quiz', true); say(GAMES[id].title); ask(true);
+  }
+  $('listen-q').addEventListener('click', () => { wake(); say(quiz.line + ' ' + GAMES[quiz.id].tips[quiz.level]); });
+  [0, 1, 2].forEach(n => $('ql-' + n).addEventListener('click', () => {
+    quiz.level = n; ql[quiz.id] = n; save(); quiz.n = 0; ask();
+  }));
+  $('qagain').addEventListener('click', () => { quiz.n = 0; ask(); });
+
+  // ================= 첫 화면 =================
+  function show(v, quiet) {
+    ['home', 'tangram', 'quiz'].forEach(n => { $('view-' + n).hidden = n !== v; });
+    if (v !== 'quiz') { quiz.busy = false; quiz.won = false; }
+    if (quiet) return;
+    if (v === 'home') say('오늘은 뭐하고 놀까?');
+    else if (v === 'tangram') say('요리조리. ' + $('hint').textContent);
+  }
+  // 꼼지: 살짝 기울어진 노란 네모, 윙크하는 얼굴, 파란 세모를 들고 있다
+  function mascot() {
+    const s = mk('svg', { viewBox: '0 0 120 120', class: 'mj', 'aria-hidden': 'true' });
+    mk('path', { d: 'M50 86 Q47 102 37 105 M72 86 Q78 99 91 99 M30 64 Q17 62 12 51 M90 52 Q99 45 99 33', class: 'limb' }, s);
+    mk('polygon', { points: '91,13 114,27 94,39', class: 'tri' }, s);
+    mk('path', { d: 'M66 6 L68 15 M79 9 L75 17', class: 'spark' }, s);
+    const g = mk('g', { transform: 'rotate(-12 59 55)' }, s);
+    mk('rect', { x: 28, y: 24, width: 62, height: 62, rx: 15, class: 'body' }, g);
+    mk('ellipse', { cx: 48, cy: 52, rx: 4, ry: 6, class: 'eye' }, g);
+    mk('path', { d: 'M78 45 L69 50 L78 55 M55 63 Q62 71 70 62', class: 'feat' }, g);
+    mk('circle', { cx: 42, cy: 65, r: 5.5, class: 'cheek' }, g);
+    mk('circle', { cx: 80, cy: 62, r: 5.5, class: 'cheek' }, g);
+    return s;
+  }
+  // 놀이를 맡은 친구 얼굴: kkom 꼼지, dong 동글, semo 세모
+  function face(kind) {
+    const s = mk('svg', { viewBox: '0 0 44 44', class: 'host', 'aria-hidden': 'true' }), y = kind === 'semo' ? 5 : 0;
+    if (kind === 'dong') mk('circle', { cx: 22, cy: 22, r: 19, class: 'c1' }, s);
+    else if (kind === 'semo') mk('polygon', { points: '22,7 38,36 6,36', class: 'c0 round' }, s);
+    else mk('rect', { x: 4, y: 4, width: 36, height: 36, rx: 10, class: 'c3' }, s);
+    mk('circle', { cx: 16, cy: 21 + y, r: 2.4, class: 'eye' }, s);
+    mk('circle', { cx: 28, cy: 21 + y, r: 2.4, class: 'eye' }, s);
+    mk('path', { d: `M18 ${27 + y} Q22 ${31 + y} 26 ${27 + y}`, class: 'feat' }, s);
+    return s;
+  }
+  // 글자 대신 쓰는 단추 그림
+  function ico(name) {
+    const s = mk('svg', { viewBox: '0 0 40 40', class: 'ico', 'aria-hidden': 'true' });
+    const d = {
+      home: 'M5 20 L20 7 L35 20 M10 17 V33 H30 V17',
+      sound: 'M6 16 H12 L21 9 V31 L12 24 H6 Z M27 14 Q32 20 27 26',
+      retry: 'M31 20 A11 11 0 1 1 26 11 M27 3 V12 H18',
+      next: 'M13 8 L32 20 L13 32 Z',
+      check: 'M8 21 L17 30 L33 11',
+      clock: 'M20 6 a14 14 0 1 0 0.01 0 Z M20 12 V20 H27',
+      talk: 'M6 8 H34 V27 H21 L12 34 V27 H6 Z',
+    }[name];
+    mk('path', { d }, s);
+    return s;
+  }
+  const SQUARE = PUZZLES.find(z => z.name === '네모').pieces;
+  const pts = q => q.p.map(v => v.join(',')).join(' ');
+  function gameIcon(id) {
+    const s = mk('svg', { viewBox: '0 0 60 60', class: 'gi', 'aria-hidden': 'true' });
+    if (id === 'bonds') {
+      mk('path', { d: 'M30 16 L16 42 M30 16 L44 42', class: 'ln' }, s);
+      [[30, 16, 10, 0], [16, 44, 9, 1], [44, 44, 9, 4]].forEach(([cx, cy, r, k]) => mk('circle', { cx, cy, r, class: 'c' + k }, s));
+    } else if (id === 'bundles') {
+      mk('rect', { x: 8, y: 6, width: 16, height: 48, rx: 6, class: 'box' }, s);
+      [14, 25, 36, 47].forEach(cy => mk('circle', { cx: 16, cy, r: 4.5, class: 'c0' }, s));
+      [[36, 46], [49, 46], [42, 34]].forEach(([cx, cy]) => mk('circle', { cx, cy, r: 5.5, class: 'c3' }, s));
+    } else if (id === 'clock') {
+      mk('circle', { cx: 30, cy: 30, r: 24, class: 'box' }, s);
+      mk('path', { d: 'M30 30 V13', class: 'ln h1' }, s);
+      mk('path', { d: 'M30 30 L41 36', class: 'ln h0' }, s);
+    } else if (id === 'calendar') {
+      mk('rect', { x: 7, y: 10, width: 46, height: 42, rx: 7, class: 'box' }, s);
+      mk('rect', { x: 7, y: 10, width: 46, height: 13, rx: 6, class: 'c0' }, s);
+      [20, 30, 40].forEach(cx => [33, 43].forEach(cy => mk('circle', { cx, cy, r: 3.2, class: cx === 30 && cy === 43 ? 'c0' : 'c1' }, s)));
+    } else if (id === 'tangram') {
+      const g = mk('g', { transform: 'translate(8 8) scale(11)' }, s);
+      SQUARE.forEach((q, k) => mk('polygon', { points: pts(q), class: 'c' + k }, g));
+    } else if (id === 'color') {
+      [[21, 23, 3], [39, 23, 1], [30, 39, 2]].forEach(([cx, cy, k]) => mk('circle', { cx, cy, r: 13, class: 'c' + k + ' dab' }, s));
+    } else {
+      mk('circle', { cx: 11, cy: 30, r: 8, class: 'c1' }, s);
+      mk('polygon', { points: '30,21 39,38 21,38', class: 'c3' }, s);
+      mk('text', { x: 50, y: 31, class: 'qm' }, s).textContent = '?';
+    }
+    return s;
+  }
+  [['home-t', 'home', '홈'], ['home-q', 'home', '홈'], ['qhome', 'home', '다른 놀이'], ['reset', 'retry', '다시'],
+    ['again', 'retry', '한 번 더'], ['qagain', 'retry', '한 번 더'], ['next', 'next', '다음 그림'],
+    ['sound-home', 'sound', '소리'], ['voice-home', 'talk', '말해 주기'], ['listen-t', 'sound', '설명 듣기'], ['listen-q', 'sound', '문제 듣기']].forEach(([id, name, label]) => {
+    $(id).replaceChildren(ico(name));
+    $(id).setAttribute('aria-label', label);
+  });
+  $('hint-btn').textContent = '?';
+  $('hint-btn').setAttribute('aria-label', '힌트');
+  ['level-', 'ql-'].forEach(pre => [0, 1, 2].forEach(n => {
+    $(pre + n).textContent = '★'.repeat(n + 1);
+    $(pre + n).setAttribute('aria-label', ['쉬움', '보통', '어려움'][n]);
+  }));
+  [1, 2].forEach(n => {
+    const s = mk('svg', { viewBox: '0 0 4 4', 'aria-hidden': 'true' });
+    SQUARE.forEach(q => mk('polygon', { points: pts(q) }, s));
+    $('sets-' + n).replaceChildren(s, document.createTextNode('×' + n));
+    $('sets-' + n).setAttribute('aria-label', `칠교 ${n}개`);
+  });
+  ['home-t', 'home-q', 'qhome'].forEach(id => $(id).addEventListener('click', () => show('home')));
+  const TILES = [
+    { id: 'tangram', name: '요리조리', sub: '칠교 놀이', tone: 'coral' },
+    { id: 'clock', name: '째깍째깍', sub: '시계 놀이', tone: 'yellow' },
+    { id: 'calendar', name: '오늘은 무슨 날?', sub: '달력 놀이', tone: 'blue' },
+    { id: 'bonds', name: '모아모아', sub: '수 가르기와 모으기', tone: 'sage' },
+    { id: 'bundles', name: '차곡차곡', sub: '열 개씩 묶어 세기', tone: 'blue' },
+    { id: 'pattern', name: '알쏭달쏭', sub: '규칙 찾기', tone: 'yellow' },
+    { id: 'color', name: '알록달록', sub: '색칠 놀이', tone: 'coral' },
+  ];
+  const go = id => { wake(); if (id === 'tangram') show('tangram'); else openQuiz(id); };
+  TILES.forEach(t => {
+    const b = el('button', 'tile ' + t.tone);
+    b.type = 'button'; b.id = 'go-' + t.id;
+    b.append(gameIcon(t.id), el('b', '', t.name), el('small', '', t.sub));
+    b.addEventListener('click', () => go(t.id));
+    $('tiles').appendChild(b);
+  });
+  // 잠깐 놀기: 꼼지가 놀이 하나를 골라 준다
+  const quickText = el('span');
+  quickText.append(el('b', '', '잠깐 놀기'), el('small', '', '꼼지가 놀이를 골라줄게!'));
+  const quickGo = ico('next');
+  quickGo.classList.add('go');
+  $('quick').append(ico('clock'), quickText, quickGo);
+  $('quick').addEventListener('click', () => go(pick(TILES).id));
+  $('mascot-home').replaceChildren(mascot());
+  document.querySelectorAll('.win-mj').forEach(n => n.replaceChildren(mascot()));
+  $('host-t').replaceChildren(face('semo'));
+
+  new ResizeObserver(layout).observe(stage);
+  mark(); buildPicker(); load(mine()[0]);
+  show('home', true);
+})();
+</script>
+</body>
+</html>
