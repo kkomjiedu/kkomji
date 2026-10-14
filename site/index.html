@@ -1060,8 +1060,9 @@ body { margin: 0; overscroll-behavior: none; }
   }
 
   // ---------- 판 만들기 ----------
+  let boardLevel = -1; // 칠교판을 마지막으로 만든 난이도
   function load(i) {
-    cur = i; won = false; $('win').hidden = true; active.clear();
+    cur = i; won = false; boardLevel = level; $('win').hidden = true; active.clear();
     turning = level > 0;
     clearTimeout(hintTimer);
     slotLayer.classList.toggle('plain', level === 2);
@@ -2658,14 +2659,14 @@ body { margin: 0; overscroll-behavior: none; }
   }
   function openQuiz(id) {
     quiz.id = id; quiz.n = 0; quiz.goal = GAMES[id].rounds || 5;
-    quiz.level = [0, 1, 2].includes(ql[id]) ? ql[id] : 1;
+    quiz.level = level; // 난이도는 모든 놀이가 함께 쓴다. 한 놀이에서 고르면 다른 놀이에서도 그대로.
     $('qtitle').textContent = GAMES[id].title;
     $('host-q').replaceChildren(face(HOST[id]));
     show('quiz', true); say(GAMES[id].title); ask(true);
   }
   $('listen-q').addEventListener('click', () => { wake(); say(quiz.line + ' ' + GAMES[quiz.id].tips[quiz.level]); });
   [0, 1, 2].forEach(n => $('ql-' + n).addEventListener('click', () => {
-    quiz.level = n; ql[quiz.id] = n; save(); quiz.n = 0; ask();
+    quiz.level = level = n; save(); quiz.n = 0; ask();
   }));
   $('qagain').addEventListener('click', () => { quiz.n = 0; ask(); });
 
@@ -2808,7 +2809,12 @@ body { margin: 0; overscroll-behavior: none; }
     { id: 'magic', name: '뾰로롱', sub: '마방진', tone: 'coral' },
     ...Object.entries(KNOW).map(([key, t], i) => ({ id: 'k-' + key, name: t.name, sub: t.sub, tone: ['blue', 'coral', 'sage', 'yellow'][i % 4], area: 'know' })),
   ];
-  const go = id => { wake(); if (id === 'tangram') show('tangram'); else openQuiz(id); };
+  const go = id => {
+    wake();
+    if (id !== 'tangram') { openQuiz(id); return; }
+    mark(); if (boardLevel !== level) load(cur); // 다른 놀이에서 난이도를 바꿨으면 칠교판도 그 난이도로
+    show('tangram');
+  };
   // 첫 화면은 영역별로 나눈다: 사고력 수학, 세상 탐험
   [['math', '사고력 수학'], ['know', '세상 탐험 · 과학과 사회']].forEach(([area, title]) => {
     const sec = el('section', 'area'), grid = el('div', 'grid');
