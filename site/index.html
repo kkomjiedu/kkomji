@@ -163,6 +163,9 @@ body {
 }
 .qstage { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; margin-top: auto; }
 .qchoices { justify-content: center; gap: 12px; margin-bottom: auto; }
+/* 보기는 문제와 떨어뜨리고 점선으로 나눠서, 고르는 곳이 어딘지 바로 보이게 한다 */
+.qchoices:not(:empty) { min-width: min(100%, 380px); margin-top: 14px; padding-top: 18px; border-top: 3px dashed var(--line); }
+.qsub.en { margin-top: -6px; letter-spacing: .02em; }
 .qtext { margin: 0; font-size: 1.7rem; text-align: center; text-wrap: balance; }
 .qsub { margin: 0; font-size: 1.2rem; color: var(--soft); }
 .bigtime { margin: 0; font-size: 2.6rem; color: var(--pop); }
@@ -1371,7 +1374,7 @@ body { margin: 0; overscroll-behavior: none; }
       next(lv, box) {
         // 난이도는 점 개수(★ 7개까지, ★★ 8~10개, ★★★ 11개부터), 뛰어 세기는 위쪽 단추로 고른다
         const pool = DOTS.filter(d => (lv === 0 ? d.p.length <= 7 : lv === 1 ? d.p.length >= 8 && d.p.length <= 10 : d.p.length >= 11));
-        const P = pick(pool).p, n = P.length, step = dotStep, c = cen(P);
+        const pic = pick(pool), P = pic.p, n = P.length, step = dotStep, c = cen(P);
         let gap = Infinity; // 가장 가까운 두 점 사이
         P.forEach((a, i) => P.forEach((b, j) => { if (i < j) gap = Math.min(gap, Math.hypot(a[0] - b[0], a[1] - b[1])); }));
         const reach = Math.min(9.5, gap * 0.48);
@@ -1443,7 +1446,15 @@ body { margin: 0; overscroll-behavior: none; }
         const up = () => { down = false; band(null); };
         s.addEventListener('pointerup', up);
         s.addEventListener('pointercancel', up);
-        return { custom: true, say: (step === 1 ? '1부터 차례대로 점을 이어 봐.' : `${step}씩 뛰어 세면서 점을 이어 봐.`) + ' 끝에는 처음 점으로 돌아와.' };
+        // 다 이으면 그림 이름을 크게 보여 주고, 무엇을 만들었는지 칭찬하며 4초 더 보여 준다
+        const last = pic.name.charCodeAt(pic.name.length - 1), josa = last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 ? '을' : '를';
+        return {
+          custom: true,
+          say: (step === 1 ? '1부터 차례대로 점을 이어 봐.' : `${step}씩 뛰어 세면서 점을 이어 봐.`) + ' 끝에는 처음 점으로 돌아와.',
+          reveal: () => box.appendChild(el('p', 'bigtime', pic.name)),
+          praise: `${pic.name}${josa} 완성했어!`,
+          hold: 4000,
+        };
       },
     },
     bonds: {
@@ -1593,21 +1604,27 @@ body { margin: 0; overscroll-behavior: none; }
         const first = new Date(year, month - 1, 1).getDay(), days = new Date(year, month, 0).getDate();
         const dow = d => (first + d - 1) % 7;
         let ans = 0, ref = 0, goal = '', wantDow = -1; // ref: 기준이 되는 날(테두리로 표시), wantDow: 찾아야 하는 요일
-        if (lv === 0) { ans = rnd(1, days); goal = `${month}월 ${ans}일`; }
+        // 영어로도 같은 문제를 적어 준다 (예: December 15, 2026 / the 2nd Monday of December 2026)
+        const EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const ENDOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], ENORD = ['1st', '2nd', '3rd', '4th'];
+        const M = EN[month - 1], on = d => `${M} ${d}`, plural = (k, w) => k + ' ' + w + (k > 1 ? 's' : '');
+        let en = '';
+        if (lv === 0) { ans = rnd(1, days); goal = `${month}월 ${ans}일`; en = on(ans); }
         else if (lv === 1) {
           const w = rnd(0, 6), n = rnd(0, 3);
           wantDow = w; ans = 1 + ((w - first + 7) % 7) + n * 7; goal = `${month}월 ${ORD[n]} ${DOW[w]}요일`;
+          en = `the ${ENORD[n]} ${ENDOW[w]} of ${M}`;
         } else {
           const kind = rnd(0, 4), n = rnd(2, 6);
-          if (kind === 0) { ref = rnd(1, days - n); ans = ref + n; goal = `${month}월 ${ref}일에서 ${n}일 뒤`; }
-          else if (kind === 1) { ref = rnd(n + 1, days); ans = ref - n; goal = `${month}월 ${ref}일에서 ${n}일 전`; }
-          else if (kind === 2) { ref = rnd(1, days - 7); ans = ref + 7; goal = `${month}월 ${ref}일에서 일주일 뒤`; }
-          else if (kind === 3) { ref = rnd(8, days); ans = ref - 7; goal = `${month}월 ${ref}일에서 일주일 전`; }
-          else { const w = rnd(0, 6); wantDow = w; ans = days - ((dow(days) - w + 7) % 7); goal = `${month}월 마지막 ${DOW[w]}요일`; }
+          if (kind === 0) { ref = rnd(1, days - n); ans = ref + n; goal = `${month}월 ${ref}일에서 ${n}일 뒤`; en = `${plural(n, 'day')} after ${on(ref)}`; }
+          else if (kind === 1) { ref = rnd(n + 1, days); ans = ref - n; goal = `${month}월 ${ref}일에서 ${n}일 전`; en = `${plural(n, 'day')} before ${on(ref)}`; }
+          else if (kind === 2) { ref = rnd(1, days - 7); ans = ref + 7; goal = `${month}월 ${ref}일에서 일주일 뒤`; en = `1 week after ${on(ref)}`; }
+          else if (kind === 3) { ref = rnd(8, days); ans = ref - 7; goal = `${month}월 ${ref}일에서 일주일 전`; en = `1 week before ${on(ref)}`; }
+          else { const w = rnd(0, 6); wantDow = w; ans = days - ((dow(days) - w + 7) % 7); goal = `${month}월 마지막 ${DOW[w]}요일`; en = `the last ${ENDOW[w]} of ${M}`; }
         }
         box.appendChild(el('p', 'bigtime', goal));
+        box.appendChild(el('p', 'qsub en', en));
         box.appendChild(el('p', 'qtext', '달력을 넘겨서 찾아 눌러 봐'));
-        const EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         // 달력은 다른 달이 펼쳐진 채로 시작한다. 화살표로 달을 넘겨서 찾아야 한다.
         let cur;
         do { cur = month + rnd(-(lv + 1), lv + 1); } while (cur === month || cur < 1 || cur > 12);
@@ -2065,19 +2082,20 @@ body { margin: 0; overscroll-behavior: none; }
     quiz.busy = true; pop();
     if (quiz.cur.reveal) quiz.cur.reveal();
     quiz.n++; progress();
+    // 한 문제를 맞힐 때마다 꼼지가 칭찬한다 (조각 하나, 칸 하나처럼 문제 중간에는 소리만 난다).
+    // praise: 무엇을 해냈는지 한마디, hold: 다 만든 그림을 볼 수 있게 더 기다리는 시간
+    const word = pick(PRAISE), detail = quiz.cur.praise || '', hold = quiz.cur.hold || 0;
+    say(detail ? word + ' ' + detail : word);
+    feedback(true, word, detail, hold ? 2200 : 950);
     if (quiz.n >= quiz.goal) {
       quiz.won = true;
-      cheer(pick(PRAISE)); // 마지막 문제도 칭찬을 먼저 보여 주고 칭찬 화면으로 간다
       setTimeout(() => {
         if (!quiz.won) return;
         $('qwin').hidden = false; fanfare(); confetti($('qfx'), () => quiz.won);
         say('참 잘했어! 정말 멋지다. 한 번 더 할까?');
-      }, 950);
+      }, 950 + hold);
     } else {
-      // 한 문제를 맞힐 때마다 꼼지가 짧게 칭찬한다 (조각 하나, 칸 하나처럼 문제 중간에는 소리만 난다)
-      const word = pick(PRAISE);
-      say(word); cheer(word);
-      setTimeout(() => { if (quiz.busy) ask(true); }, 1000);
+      setTimeout(() => { if (quiz.busy) ask(true); }, 1000 + hold);
     }
   }
   // 맞혔을 때 잠깐 뜨는 초록 칭찬 딱지
@@ -2100,16 +2118,18 @@ body { margin: 0; overscroll-behavior: none; }
     return s;
   }
   // good이 참이면 칭찬(1초), 거짓이면 아쉬운 얼굴과 함께 이유를 보여 준다(3초 남짓)
-  function feedback(good, title, detail) {
+  function feedback(good, title, detail, ms) {
     const c = $('cheer'), words = el('span');
     words.appendChild(el('b', '', title));
     if (detail) words.appendChild(el('small', '', detail));
     c.className = 'fb ' + (good === 'tip' ? 'tip' : good ? 'good' : 'bad'); // 'tip'은 노란 안내 말풍선
     c.replaceChildren(mood(good !== false), words);
     c.hidden = false;
+    const life = ms || (good === true ? 950 : good === 'tip' ? 2000 : 3400); // 말풍선이 떠 있는 시간
     c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
+    c.style.animationDuration = ms ? ms / 1000 + 's' : '';
     clearTimeout(cheerTimer);
-    cheerTimer = setTimeout(() => { c.hidden = true; }, good === true ? 950 : good === 'tip' ? 2000 : 3400);
+    cheerTimer = setTimeout(() => { c.hidden = true; }, life);
   }
   // 조각을 돌려야 하는 난이도에서는 누르면 돌아간다고 먼저 알려 준다
   function turnTip() {
