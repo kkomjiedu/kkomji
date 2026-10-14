@@ -167,6 +167,7 @@ body {
 .qchoices:not(:empty) { min-width: min(100%, 380px); margin-top: 14px; padding-top: 18px; border-top: 3px dashed var(--line); }
 .qsub.en { margin-top: -6px; letter-spacing: .02em; }
 .qtext { margin: 0; font-size: 1.7rem; text-align: center; text-wrap: balance; }
+.qtext, .bigtime, .fb b, .fb small { word-break: keep-all; } /* 낱말 중간에서 줄이 끊기지 않게 */
 .qsub { margin: 0; font-size: 1.2rem; color: var(--soft); }
 .bigtime { margin: 0; font-size: 2.6rem; color: var(--pop); }
 
@@ -225,6 +226,16 @@ body {
 .px.done { gap: 0; }
 .px.done .pc { border-radius: 0; }
 .sw.used { opacity: .28; }
+
+/* 궁금궁금: 꼼지가 묻는 말풍선, 정답의 검은 그림자, 그림+낱말 보기 */
+.riddle { display: flex; align-items: flex-start; gap: 10px; max-width: 560px; }
+.riddle .host { width: 48px; height: 48px; }
+.riddle .rq { margin: 0; padding: 14px 18px; border-radius: 6px 22px 22px 22px; background: var(--tray); font-size: 1.5rem; line-height: 1.35; text-align: left; text-wrap: balance; }
+.shade { font-size: clamp(4rem, 14vh, 7rem); line-height: 1; filter: brightness(0); opacity: .8; transition: filter .5s, opacity .5s; }
+.shade.lit { filter: none; opacity: 1; }
+.rc { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-block: 6px; }
+.re { font-size: 2.3rem; line-height: 1; }
+.rw { font-size: 1.15rem; line-height: 1.1; }
 
 /* 꽉꽉: 10칸 틀 */
 .eq { margin: 0; font-size: 2.4rem; line-height: 1.1; letter-spacing: .03em; }
@@ -967,8 +978,9 @@ body { margin: 0; overscroll-behavior: none; }
     if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', findVoice);
   }
   // queue가 참이면 하던 말을 끊지 않고 이어서 말한다
-  function say(text, queue) {
-    if (!sound || !voice || !canTalk || !text) return;
+  // force가 참이면 말해 주기를 꺼 뒀어도 읽어 준다 (아이가 직접 "읽어 줘"를 누른 경우)
+  function say(text, queue, force) {
+    if (!sound || (!voice && !force) || !canTalk || !text) return;
     try {
       if (!queue) speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -1361,7 +1373,86 @@ body { margin: 0; overscroll-behavior: none; }
   ];
   const DOT_STEPS = [1, 2, 3, 4, 5, 10];
 
+  // 수수께끼. a: 정답 [그림, 낱말], x: 헷갈리는 보기, fun: 맞혔을 때 덧붙이는 풀이(말장난 문제)
+  const RIDDLES = [
+    [ // ★ 생김새를 듣고 맞히기
+      { q: '코가 아주 길고, 몸집이 아주 큰 동물은 누구일까?', a: ['🐘', '코끼리'], x: [['🦒', '기린'], ['🦛', '하마'], ['🦁', '사자']] },
+      { q: '목이 아주 길어서 높은 나뭇잎도 먹는 동물은?', a: ['🦒', '기린'], x: [['🐘', '코끼리'], ['🦓', '얼룩말'], ['🐪', '낙타']] },
+      { q: '귀가 길쭉하고 깡충깡충 뛰어다니는 동물은?', a: ['🐰', '토끼'], x: [['🐱', '고양이'], ['🐶', '강아지'], ['🐿️', '다람쥐']] },
+      { q: '밤하늘에서 반짝반짝 빛나는 작은 것은?', a: ['⭐', '별'], x: [['☀️', '해'], ['☁️', '구름'], ['🌈', '무지개']] },
+      { q: '비가 오면 펼치고, 비가 그치면 접는 것은?', a: ['☂️', '우산'], x: [['🧢', '모자'], ['👢', '장화'], ['🎒', '가방']] },
+      { q: '바늘이 빙글빙글 돌면서 시간을 알려 주는 것은?', a: ['⏰', '시계'], x: [['📅', '달력'], ['🧭', '나침반'], ['⚖️', '저울']] },
+      { q: '노란 껍질을 벗기면 하얀 속이 나오는 길쭉한 과일은?', a: ['🍌', '바나나'], x: [['🍎', '사과'], ['🍇', '포도'], ['🍊', '귤']] },
+      { q: '겨울에 눈을 동글동글 굴려서 만드는 것은?', a: ['⛄', '눈사람'], x: [['🪁', '연'], ['🏰', '모래성'], ['🎈', '풍선']] },
+      { q: '다리가 여덟 개이고, 줄을 쳐서 집을 짓는 것은?', a: ['🕷️', '거미'], x: [['🐜', '개미'], ['🦋', '나비'], ['🐝', '벌']] },
+      { q: '꽃에서 꿀을 모으고 윙윙 소리를 내는 곤충은?', a: ['🐝', '벌'], x: [['🦋', '나비'], ['🐞', '무당벌레'], ['🐜', '개미']] },
+      { q: '바다에 살고, 다리가 여덟 개이고, 먹물을 뿜는 것은?', a: ['🐙', '문어'], x: [['🦀', '게'], ['🐟', '물고기'], ['🐳', '고래']] },
+      { q: '아침마다 꼬끼오 하고 우는 동물은?', a: ['🐔', '닭'], x: [['🦆', '오리'], ['🐮', '소'], ['🐷', '돼지']] },
+      { q: '불이 나면 삐뽀삐뽀 달려가는 빨간 자동차는?', a: ['🚒', '소방차'], x: [['🚓', '경찰차'], ['🚌', '버스'], ['🚕', '택시']] },
+      { q: '이를 닦을 때 쓰는 것은?', a: ['🪥', '칫솔'], x: [['🥄', '숟가락'], ['✏️', '연필'], ['🧦', '양말']] },
+    ],
+    [ // ★★ 힌트 두 개를 모두 맞는 것 찾기
+      { q: '다리가 네 개인데 걷지 못하는 것은?', a: ['🪑', '의자'], x: [['🐶', '강아지'], ['🐢', '거북'], ['🐱', '고양이']] },
+      { q: '쓰면 쓸수록 점점 짧아지는 것은?', a: ['✏️', '연필'], x: [['📒', '공책'], ['✂️', '가위'], ['📏', '자']] },
+      { q: '해가 뜨면 나를 졸졸 따라다니고, 밤이 되면 사라지는 것은?', a: ['👤', '그림자'], x: [['🐶', '강아지'], ['🦋', '나비'], ['🎈', '풍선']] },
+      { q: '입에 넣고 녹여 먹을수록 작아지는 달콤한 것은?', a: ['🍭', '사탕'], x: [['🍎', '사과'], ['🥛', '우유'], ['🍞', '빵']] },
+      { q: '아무리 먹어도 배부르지 않은 것은?', a: ['🎂', '나이'], x: [['🍚', '밥'], ['💧', '물'], ['🍭', '사탕']], fun: '나이는 해마다 한 살씩 먹지!' },
+      { q: '겨울에 하늘에서 내려오는 하얗고 차가운 것은?', a: ['❄️', '눈'], x: [['🌧️', '비'], ['☁️', '구름'], ['🍃', '바람']] },
+      { q: '바퀴가 두 개이고, 페달을 밟아서 타는 것은?', a: ['🚲', '자전거'], x: [['🚗', '자동차'], ['🚂', '기차'], ['🛴', '킥보드']] },
+      { q: '날개가 있지만 새가 아니고, 사람을 태우고 하늘을 나는 것은?', a: ['✈️', '비행기'], x: [['🐦', '새'], ['🪁', '연'], ['🚢', '배']] },
+      { q: '등에 집을 지고 다니고, 느릿느릿 기어가는 것은?', a: ['🐌', '달팽이'], x: [['🐸', '개구리'], ['🪱', '지렁이'], ['🦋', '나비']] },
+      { q: '흰 줄과 검은 줄 무늬 옷을 입은 말은?', a: ['🦓', '얼룩말'], x: [['🐯', '호랑이'], ['🐼', '판다'], ['🐴', '말']] },
+      { q: '밤에 깨어 있고, 부엉부엉 우는 새는?', a: ['🦉', '부엉이'], x: [['🦆', '오리'], ['🐧', '펭귄'], ['🐔', '닭']] },
+      { q: '추운 남극에 살고, 날지 못하는 새는?', a: ['🐧', '펭귄'], x: [['🦆', '오리'], ['🐔', '닭'], ['🦅', '독수리']] },
+      { q: '비가 그친 뒤 하늘에 뜨는 일곱 빛깔 다리는?', a: ['🌈', '무지개'], x: [['⭐', '별'], ['☀️', '해'], ['🌙', '달']] },
+      { q: '밤마다 동그래졌다가 가늘어졌다가 하는 것은?', a: ['🌙', '달'], x: [['☀️', '해'], ['⭐', '별'], ['☁️', '구름']] },
+    ],
+    [ // ★★★ 말장난 수수께끼
+      { q: '왕이 넘어지면 무슨 소리가 날까?', a: ['🦍', '킹콩'], x: [['🦁', '사자'], ['🐻', '곰'], ['🐯', '호랑이']], fun: '왕은 킹! 넘어지면 콩! 그래서 킹콩!' },
+      { q: '소가 웃으면 어떤 소리가 날까?', a: ['🐮', '우하하'], x: [['🐮', '음메'], ['🐔', '꼬끼오'], ['🐶', '멍멍']], fun: '소는 우, 웃으면 하하! 그래서 우하하!' },
+      { q: '바나나가 웃으면?', a: ['🍌', '바나나킥'], x: [['🥛', '바나나우유'], ['🐒', '원숭이'], ['🍎', '사과']], fun: '킥킥 웃으니까 바나나킥!' },
+      { q: '세상에서 가장 뜨거운 과일은?', a: ['🍑', '천도복숭아'], x: [['🍉', '수박'], ['🍓', '딸기'], ['🍇', '포도']], fun: '천 도나 되니까 엄청 뜨겁지!' },
+      { q: '세상에서 가장 추운 바다는?', a: ['🥶', '썰렁해'], x: [['🌊', '동해'], ['🌊', '서해'], ['🌊', '남해']], fun: '썰렁해! 바다 이름처럼 들리지?' },
+      { q: '오리가 꽁꽁 얼면 무엇이 될까?', a: ['⛰️', '언덕'], x: [['🍦', '아이스크림'], ['🧊', '얼음'], ['⛄', '눈사람']], fun: '언 오리, 영어로 언 덕! 그래서 언덕!' },
+      { q: '아몬드가 죽으면 무엇이 될까?', a: ['💎', '다이아몬드'], x: [['🥜', '땅콩'], ['🌰', '밤'], ['🍫', '초콜릿']], fun: '죽다는 영어로 다이! 다이아몬드!' },
+      { q: '물고기 중에서 학교를 가장 오래 다닌 물고기는?', a: ['🐟', '고등어'], x: [['🐟', '꽁치'], ['🦈', '상어'], ['🐠', '금붕어']], fun: '고등학교까지 다녀서 고등어!' },
+      { q: '미소의 반대말은?', a: ['🐮', '당기소'], x: [['😢', '울음'], ['😠', '화남'], ['😴', '졸음']], fun: '미는 소의 반대는 당기는 소! 당기소!' },
+      { q: '세상에서 가장 쉬운 숫자는?', a: ['🔢', '190000'], x: [['1️⃣', '1'], ['0️⃣', '0'], ['💯', '100']], fun: '190000은 십구만! 식은 죽 먹기처럼 쉬운 숫자!' },
+      { q: '개가 사람을 가르치면 뭐라고 할까?', a: ['🐶', '개인지도'], x: [['🏫', '학교'], ['📚', '공부'], ['✏️', '숙제']], fun: '개가 가르치니까 개인지도!' },
+      { q: '왕이 집에 가기 싫을 때 하는 말은?', a: ['👑', '궁시렁궁시렁'], x: [['👑', '안녕'], ['👑', '잘 자'], ['👑', '배고파']], fun: '왕이 사는 집은 궁! 궁시렁궁시렁!' },
+    ],
+  ];
+
   const GAMES = {
+    riddle: {
+      title: '궁금궁금',
+      tips: ['검은 그림자 모양을 보고 생각해 봐.', '힌트가 두 개야. 둘 다 맞는 걸 찾아봐.', '말장난이야! 소리 내어 읽어 봐.'],
+      bag: {},
+      // 수수께끼: 문제 글과 정답의 그림자를 보여 주고, 그림과 낱말이 함께 있는 보기에서 고른다.
+      // 글을 뜨문뜨문 읽는 아이도 그림자와 그림으로 풀 수 있다. 맞히면 그림자에 색이 입혀진다.
+      next(lv, box) {
+        if (!this.bag[lv] || !this.bag[lv].length) this.bag[lv] = shuffle(RIDDLES[lv].slice()); // 한 바퀴 다 낼 때까지 같은 문제가 안 나온다
+        const r = this.bag[lv].pop();
+        const bub = el('div', 'riddle');
+        bub.append(face('kkom'), el('p', 'qtext rq', r.q)); // 문제 글은 말풍선 안에만 한 번 적는다
+        const shade = el('div', 'shade', r.a[0]);
+        const read = el('button', 'chip');
+        read.type = 'button'; read.id = 'rd-read';
+        read.append(ico('sound'), el('span', '', '읽어 줘'));
+        read.addEventListener('click', () => { wake(); say(r.q, false, true); }); // 말해 주기를 꺼 둬도 이 단추는 읽어 준다
+        box.append(bub, shade, read);
+        const pic = ([e, w]) => () => { const s = el('span', 'rc'); s.append(el('span', 're', e), el('span', 'rw', w)); return s; };
+        return {
+          answer: r.a[1],
+          choices: shuffle([r.a, ...r.x]).map(o => ({ value: o[1], node: pic(o) })),
+          why: () => '그림자 모양과 같은 걸 찾아봐.',
+          reveal: () => shade.classList.add('lit'),
+          praise: r.fun || `정답은 ${r.a[1]}!`,
+          hold: 1500,
+          say: r.q,
+        };
+      },
+    },
     dots: {
       title: '콕콕',
       rounds: 3,
@@ -2029,7 +2120,7 @@ body { margin: 0; overscroll-behavior: none; }
   const PRAISE = ['딩동댕!', '우와, 맞았어!', '잘했어!', '바로 그거야!'];
   const RETRY = ['아쉬워! 다시 해 보자.', '괜찮아, 한 번 더!', '아깝다! 다시 해 볼까?'];
   const HOST = { bonds: 'dong', bundles: 'dong', clock: 'dong', calendar: 'dong', pattern: 'semo', color: 'kkom', dots: 'semo',
-    make10: 'dong', pyramid: 'dong', train: 'dong', scale: 'dong', hundred: 'dong', coins: 'kkom', magic: 'semo' };
+    make10: 'dong', pyramid: 'dong', train: 'dong', scale: 'dong', hundred: 'dong', coins: 'kkom', magic: 'semo', riddle: 'kkom' };
   const progress = () => $('qprog').replaceChildren(...Array.from({ length: quiz.goal }, (_, i) => el('span', i < quiz.n ? 'on' : '')));
   function ask(queue) {
     quiz.busy = false; quiz.won = false; quiz.miss = 0; $('qwin').hidden = true; $('cheer').hidden = true;
@@ -2231,6 +2322,9 @@ body { margin: 0; overscroll-behavior: none; }
     } else if (id === 'tangram') {
       const g = mk('g', { transform: 'translate(8 8) scale(11)' }, s);
       SQUARE.forEach((q, k) => mk('polygon', { points: pts(q), class: 'c' + k }, g));
+    } else if (id === 'riddle') {
+      mk('path', { d: 'M8 10 H52 V40 H28 L16 52 V40 H8 Z', class: 'box' }, s);
+      mk('text', { x: 30, y: 25, class: 'qm' }, s).textContent = '?';
     } else if (id === 'make10') {
       mk('rect', { x: 5, y: 15, width: 50, height: 30, rx: 7, class: 'box' }, s);
       for (let i = 0; i < 10; i++) mk('circle', { cx: 12 + (i % 5) * 9, cy: i < 5 ? 24 : 36, r: 3.6, class: i < 7 ? 'c0' : 'c1' }, s);
@@ -2295,6 +2389,7 @@ body { margin: 0; overscroll-behavior: none; }
     { id: 'hundred', name: '폴짝폴짝', sub: '100까지 수 놀이', tone: 'yellow' },
     { id: 'coins', name: '짤랑짤랑', sub: '동전 계산', tone: 'blue' },
     { id: 'magic', name: '뾰로롱', sub: '마방진', tone: 'coral' },
+    { id: 'riddle', name: '궁금궁금', sub: '수수께끼', tone: 'sage' },
   ];
   const go = id => { wake(); if (id === 'tangram') show('tangram'); else openQuiz(id); };
   TILES.forEach(t => {
