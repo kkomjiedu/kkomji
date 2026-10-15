@@ -1,0 +1,11 @@
+﻿<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>꼼지 목소리 시험</title>
+<style>body{font-family:sans-serif;background:#FFF8E6;color:#4A4A4A;max-width:520px;margin:20px auto;padding:0 16px}button{display:block;width:100%;margin:10px 0;padding:16px;font-size:18px;border-radius:14px;border:3px solid #EBDDB9;background:#fff}.s{border-color:#F7C948}#v{font-size:14px;color:#888}</style>
+<h1>꼼지 목소리 시험</h1><p id="v">시험 페이지 1번</p>
+<h2>① 고른 샘플 (2번)</h2><button class="s" onclick="p('sample2')">샘플 2번 듣기</button>
+<h2>② 꼼지 앱 안의 녹음</h2>
+<button onclick="p('8c342486')">오늘은 뭐하고 놀까?</button>
+<button onclick="p('59c522f5')">딩동댕!</button>
+<button onclick="p('0e74f5c0')">타조예요!</button>
+<button onclick="p('db95adec')">날지 못하는 새 중에서 가장 커요.</button>
+<p id="st"></p>
+<script>const a=new Audio();function p(f){a.src='voice/'+f+'.mp3';a.play().then(()=>{document.getElementById('st').textContent='재생 중: '+f}).catch(e=>{document.getElementById('st').textContent='재생 안 됨: '+e.name});}</script>
