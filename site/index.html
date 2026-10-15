@@ -1020,28 +1020,21 @@ body { margin: 0; overscroll-behavior: none; }
     }
     return items;
   }
-  const player = typeof Audio === 'function' ? new Audio() : null;
-  // 휴대폰(특히 아이폰)은 손으로 누른 순간에 한 번 소리를 내 둬야 그 뒤에 녹음 목소리를 틀 수 있다. 첫 터치에 조용히 한 번 틀어 둔다.
-  if (player && CLIPS.size) {
-    const unlock = () => {
-      document.removeEventListener('pointerdown', unlock, true);
-      document.removeEventListener('touchend', unlock, true);
-      if (talking) return;
-      try {
-        const src = 'voice/' + CLIPS.values().next().value + '.mp3';
-        player.muted = true; player.src = src;
-        const p = player.play();
-        const done = () => { if (player.src.endsWith(src) && player.muted) { player.pause(); player.muted = false; } };
-        if (p && p.then) p.then(done, done); else done();
-      } catch (err) { player.muted = false; }
-    };
-    document.addEventListener('pointerdown', unlock, true);
-    document.addEventListener('touchend', unlock, true);
+  // 녹음 목소리는 효과음과 같은 Web Audio로 튼다. <audio>로 틀면 아이폰이 음악처럼 여겨서 잠금 화면에 재생 단추가 계속 남는다.
+  const bufs = new Map(); // 한 번 받은 녹음은 다시 받지 않는다
+  function clipBuf(k) {
+    if (bufs.has(k)) return bufs.get(k);
+    const p = fetch('voice/' + k + '.mp3')
+      .then(r => { if (!r.ok) throw new Error('no clip'); return r.arrayBuffer(); })
+      .then(data => new Promise((ok, no) => ac.decodeAudioData(data, ok, no)));
+    bufs.set(k, p);
+    p.catch(() => bufs.delete(k));
+    return p;
   }
-  let talkQ = [], talking = false, talkGen = 0; // talkGen: 말을 끊으면 바뀐다. 끊긴 말의 끝 알림이 새 말을 건너뛰지 않게.
+  let talkQ = [], talking = false, talkGen = 0, talkSrc = null; // talkGen: 말을 끊으면 바뀐다. 끊긴 말의 끝 알림이 새 말을 건너뛰지 않게.
   function hush() {
     talkQ = []; talking = false; talkGen++;
-    if (player) { try { player.pause(); } catch (err) { /* 무시 */ } }
+    if (talkSrc) { try { talkSrc.stop(); } catch (err) { /* 무시 */ } talkSrc = null; }
     if (canTalk) { try { speechSynthesis.cancel(); } catch (err) { /* 무시 */ } }
   }
   function next() {
@@ -1049,16 +1042,17 @@ body { margin: 0; overscroll-behavior: none; }
     if (!it) { talking = false; return; }
     talking = true;
     const g = talkGen, go = () => { if (g === talkGen) next(); };
-    if (it.k && player) {
-      player.onended = go;
-      player.onerror = go; // 파일이 안 열리면 그 말은 건너뛴다 (기기 목소리로 바꾸면 다른 사람 목소리처럼 들린다)
-      player.muted = false;
-      player.src = 'voice/' + it.k + '.mp3';
-      const p = player.play();
-      if (p && p.catch) p.catch(e => { if (g === talkGen && e && e.name === 'NotAllowedError') { talkQ = []; talking = false; } }); // 자동 재생이 막히면 조용히 넘어간다
+    if (it.k) {
+      if (!ac) { go(); return; }
+      // 파일이 안 열리면 그 말은 건너뛴다 (기기 목소리로 바꾸면 다른 사람 목소리처럼 들린다)
+      clipBuf(it.k).then(buf => {
+        if (g !== talkGen) return;
+        const src = ac.createBufferSource();
+        src.buffer = buf; src.connect(ac.destination); src.onended = go;
+        talkSrc = src; src.start();
+      }, go);
       return;
-    }
-    if (!canTalk || CLIPS.size) { next(); return; } // 녹음 목소리가 있으면 기기 목소리는 쓰지 않는다
+    }    if (!canTalk || CLIPS.size) { next(); return; } // 녹음 목소리가 있으면 기기 목소리는 쓰지 않는다
     try {
       const u = new SpeechSynthesisUtterance(it.t);
       u.lang = 'ko-KR'; u.rate = 0.95; u.pitch = 1;
@@ -1071,7 +1065,10 @@ body { margin: 0; overscroll-behavior: none; }
     if (!sound || (!voice && !force) || !text) return;
     try {
       if (!queue) hush();
-      talkQ.push(...plan(text));
+      wake();
+      const items = plan(text);
+      if (ac) items.forEach(it => { if (it.k) clipBuf(it.k).catch(() => {}); }); // 이어 붙일 조각을 미리 받아 둔다
+      talkQ.push(...items);
       if (!talking) next();
     } catch (err) { /* 말이 안 나와도 놀이는 된다 */ }
   }
