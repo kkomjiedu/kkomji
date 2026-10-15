@@ -972,6 +972,24 @@ body { margin: 0; overscroll-behavior: none; }
       if (ac.state === 'suspended') ac.resume();
     } catch (err) { ac = null; }
   }
+  // 아이폰이 꼼지 소리를 음악처럼 다루지 않게 한다: 게임 효과음 같은 '배경 소리'로 알리고,
+  // 잠금 화면·제어 센터의 재생 정보와 단추를 비운다. 화면을 끄거나 다른 앱으로 가면 소리를 멈추고 내려놓는다.
+  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (err) { /* 지원 안 하는 기기 */ }
+  const noMedia = () => {
+    if (!('mediaSession' in navigator)) return;
+    try { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; } catch (err) { /* 무시 */ }
+    ['play', 'pause', 'stop', 'seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack'].forEach(a => {
+      try { navigator.mediaSession.setActionHandler(a, null); } catch (err) { /* 무시 */ }
+    });
+  };
+  noMedia();
+  const letGo = () => {
+    if (typeof hush === 'function') hush();
+    if (ac && ac.state === 'running') { try { ac.suspend(); } catch (err) { /* 무시 */ } }
+    noMedia();
+  };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
+  window.addEventListener('pagehide', letGo);
   function tone(freq, at, len) {
     if (!sound || !ac) return;
     const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at;
